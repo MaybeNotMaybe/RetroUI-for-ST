@@ -1,32 +1,21 @@
-// js/core/EventBus.js
-(function(window) {
-    'use strict';
+// js/core/EventBus.js -事件发布/订阅系统，用于模块间通信
+const EventBus = {
+    events: {},
     
-    // 模块定义
-    const EventBus = {
-        events: {},
-        
-        subscribe: function(event, callback) {
-            if (!this.events[event]) {
-                this.events[event] = [];
-            }
-            this.events[event].push(callback);
-        },
-        
-        publish: function(event, data) {
-            if (!this.events[event]) return;
-            this.events[event].forEach(callback => callback(data));
-        },
-        
-        unsubscribe: function(event, callback) {
-            if (!this.events[event]) return;
-            this.events[event] = this.events[event].filter(cb => cb !== callback);
+    subscribe: function(event, callback) {
+        if (!this.events[event]) {
+            this.events[event] = [];
         }
-    };
+        this.events[event].push(callback);
+    },
     
-    // 暴露模块到全局命名空间
-    window.EventBus = EventBus;
+    publish: function(event, data) {
+        if (!this.events[event]) return;
+        this.events[event].forEach(callback => callback(data));
+    },
     
-    console.log('EventBus模块已加载');
-    
-})(window);
+    unsubscribe: function(event, callback) {
+        if (!this.events[event]) return;
+        this.events[event] = this.events[event].filter(cb => cb !== callback);
+    }
+};
