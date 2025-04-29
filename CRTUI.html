@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIA终端系统</title>
+    <style>
+        /* 全局样式 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: #111;
+        }
+        
+        /* CRT显示器外壳 */
+        .crt-container {
+            position: relative;
+            width: 95%;
+            height: 90%;
+            max-width: 1200px;
+            margin: 2% auto;
+            background-color: #222;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* 屏幕效果 */
+        .screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+            display: flex;
+            /* 添加双线边框 */
+            border: 2px solid #e3af00;
+            outline: 1px solid #e3af00;
+            outline-offset: -4px;
+        }
+        
+        /* CRT效果：扫描线 */
+        .screen::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* CRT效果：轻微辉光 */
+        .screen::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 30px rgba(200, 175, 20, 0.1);
+            pointer-events: none;
+            z-index: 9;
+        }
+        
+        /* 左侧程序窗口 */
+        .program-window {
+            flex: 1;
+            border-right: 1px solid #e3af00;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 右侧菜单 */
+        .menu-panel {
+            width: 180px;
+            padding: 10px;
+            overflow-y: auto;
+            user-select: none;
+        }
+        
+        /* 菜单标题 */
+        .menu-title {
+            color: #e3af00;
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e3af00;
+        }
+        
+        /* 菜单项 */
+        .menu-item {
+            color: #e3af00;
+            padding: 6px 10px;
+            margin: 4px 0;
+            cursor: pointer;
+            border: 1px solid transparent;
+            text-shadow: 0 0 5px rgba(227, 175, 0, 0.3);
+        }
+        
+        .menu-item:hover {
+            border: 1px solid #e3af00;
+            background-color: rgba(227, 175, 0, 0.1);
+            text-shadow: 0 0 8px rgba(227, 175, 0, 0.6);
+        }
+        
+        /* 终端内容区域 */
+        .terminal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 15px;
+            padding-top: 35px;  /* 增加顶部padding以避免被状态栏遮挡 */
+            color: #e3af00;
+            font-family: "Courier New", monospace;
+            font-size: 16px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+        }
+        
+        /* 命令提示符和输入区域 */
+        .command-line {
+            display: flex;
+            margin-top: 10px;
+        }
+        
+        .prompt {
+            color: #e3af00;
+            margin-right: 8px;
+        }
+        
+        /* 输入框 */
+        #user-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #e3af00;
+            font-family: "Courier New", monospace;
+            font-size: 16px;
+            caret-color: #e3af00;
+            outline: none;
+            text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+        }
+        
+        /* 闪烁的光标 */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background-color: #e3af00;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+        
+        /* 应用窗口 */
+        .app-window {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 5px;
+            padding-top: 35px;  /* 增加顶部padding */
+            color: #e3af00;
+            overflow-y: auto;
+        }
+
+        /* 选中项的样式 */
+        .menu-item.selected {
+            background-color: rgba(227, 175, 0, 0.4);
+            border: 1px solid #e3af00;
+            color: #e3af00;  /* 从#000改回为#e3af00 */
+            text-shadow: 0 0 8px rgba(227, 175, 0, 0.8);  /* 增强文字发光效果 */
+        }
+        
+        /* 窗口标题栏 */
+        .window-title {
+            border-bottom: 1px solid #e3af00;
+            padding: 5px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .close-btn {
+            cursor: pointer;
+        }
+        
+        /* 窗口内容 */
+        .window-content {
+            padding: 5px;
+        }
+        
+        /* 应用程序特定样式 */
+        .file-item {
+            padding: 3px;
+            cursor: pointer;
+            margin: 2px 0;
+        }
+        
+        .file-item:hover {
+            background-color: rgba(227, 175, 0, 0.2);
+        }
+        
+        /* 状态栏 */
+        .status-bar {
+            position: absolute;
+            top: 0;          /* 从bottom: 0改为top: 0 */
+            left: 0;
+            right: 0;
+            height: 25px;
+            border-bottom: 1px solid #e3af00;  /* 从border-top改为border-bottom */
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            align-items: center;
+            color: #e3af00;
+            background-color: rgba(0, 0, 0, 0.5);
+            font-size: 14px;
+            z-index: 5;      /* 确保它在其他元素之上 */
+        }
+        
+        /* 开机动画效果 */
+        @keyframes flicker {
+            0% { opacity: 0.8; }
+            5% { opacity: 0.5; }
+            10% { opacity: 0.8; }
+            15% { opacity: 0.9; }
+            20% { opacity: 0.7; }
+            25% { opacity: 0.9; }
+            30% { opacity: 0.8; }
+            35% { opacity: 1.0; }
+            40% { opacity: 0.7; }
+            45% { opacity: 0.9; }
+            50% { opacity: 1.0; }
+            55% { opacity: 0.8; }
+            60% { opacity: 0.9; }
+            100% { opacity: 1.0; }
+        }
+        
+        /* 开机后应用闪烁效果 */
+        .flicker-effect {
+            animation: flicker 2s ease-in-out;
+        }
+        
+        /* 加载动画 */
+        @keyframes loading {
+            0% { content: ".  "; }
+            33% { content: ".. "; }
+            66% { content: "..."; }
+            100% { content: ".  "; }
+        }
+        
+        .loading::after {
+            content: ".  ";
+            animation: loading 1.5s infinite steps(1);
+        }
+        
+        /* 电源按钮 */
+        .power-button {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            width: 15px;
+            height: 15px;
+            background-color: #444;
+            border: 2px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .power-button:active {
+            background-color: #e3af00;
+            box-shadow: 0 0 10px rgba(227, 175, 0, 0.7);
+        }
+
+        /* 底部信息栏样式 */
+        .info-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 24px;
+            background-color: #e3af00;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            z-index: 100;
+        }
+
+        /* 隐藏所有滚动条 */
+        /* Chrome, Safari, Edge 等基于webkit的浏览器 */
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            background: transparent;
+            display: none;
+        }
+
+        /* 适用于Firefox */
+        * {
+            scrollbar-width: none;
+        }
+
+        /* 确保全局没有滚动条 */
+        html, body {
+            overflow: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        /* 确保含滚动内容的容器不显示滚动条但保留滚动功能 */
+        .terminal, .app-window, .menu-panel, .window-content {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            overflow-y: auto;
+        }
+
+        .terminal::-webkit-scrollbar, 
+        .app-window::-webkit-scrollbar, 
+        .menu-panel::-webkit-scrollbar,
+        .window-content::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            background: transparent;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="crt-container">
+        <div class="power-button" id="power-btn"></div>
+        <div class="screen">
+            <!-- 左侧程序/命令行窗口 -->
+            <div class="program-window">
+                <!-- 终端命令行 -->
+                <div class="terminal flicker-effect" id="terminal">
+                    <div id="output">
+                        CENTRAL INTELLIGENCE AGENCY
+                        SECURE TERMINAL V3.2.1 [1982-04-29]
+                        TOP SECRET - AUTHORIZED PERSONNEL ONLY
+                        ENTER CREDENTIALS TO PROCEED.
+                    </div>
+                    <div class="command-line">
+                        <span class="prompt">></span>
+                        <input type="text" id="user-input" autofocus>
+                        <span class="cursor"></span>
+                    </div>
+                </div>
+                
+                <!-- 文件浏览器应用 -->
+                <div class="app-window" id="fileExplorer">
+                    <div class="window-title">
+                        <span>FILE BROWSER</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <div class="file-item">[DIR] MISSIONS</div>
+                        <div class="file-item">[DIR] INTEL</div>
+                        <div class="file-item">[DIR] PERSONNEL</div>
+                        <div class="file-item">[TXT] README.TXT</div>
+                        <div class="file-item">[TXT] CURRENT_MISSION.TXT</div>
+                    </div>
+                </div>
+                
+                <!-- 档案查询应用 -->
+                <div class="app-window" id="dossierSystem">
+                    <div class="window-title">
+                        <span>DOSSIER SYSTEM</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <div>
+                            SUBJECT SEARCH: <input type="text" style="background: #000; color: #e3af00; border: 1px solid #e3af00;">
+                            <button style="background: #000; color: #e3af00; border: 1px solid #e3af00; cursor: pointer;">SEARCH</button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            RESULTS:
+                            NO RESULTS FOUND.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 解密工具应用 -->
+                <div class="app-window" id="decryptTool">
+                    <div class="window-title">
+                        <span>DECRYPTION UTILITY</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <div>
+                            INPUT ENCRYPTED TEXT:
+                            <textarea style="width: 100%; height: 100px; background: #000; color: #e3af00; border: 1px solid #e3af00;"></textarea>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button style="background: #000; color: #e3af00; border: 1px solid #e3af00; cursor: pointer;">DECRYPT</button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            RESULT:
+                            AWAITING INPUT...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 状态栏 -->
+                <div class="status-bar">
+                    <div>USER: AGENT</div>
+                    <div>STATUS: SECURE</div>
+                    <div id="clock">1982-04-29 12:00:00</div>
+                </div>
+            </div>
+            
+            <!-- 右侧菜单面板 -->
+            <div class="menu-panel">
+                <div class="menu-title">SYSTEM MENU</div>
+                <div class="menu-item" data-app="terminal">MAIN</div>
+                <div class="menu-item" data-app="fileExplorer">FILE BROWSER</div>
+                <div class="menu-item" data-app="dossierSystem">DOSSIER SYSTEM</div>
+                <div class="menu-item" data-app="decryptTool">DECRYPTION TOOL</div>
+                <div class="menu-item" data-app="mail">MAIL</div> 
+                <div class="menu-item" data-app="comms">COMMUNICATIONS</div>
+                <div class="menu-item" data-app="map">WORLD MAP</div>
+                <div class="menu-item" data-app="musicPlayer">MUSIC PLAYER</div> 
+                <div class="menu-title">SYSTEM</div>
+                <div class="menu-item" data-app="login">LOGIN</div>
+                <div class="menu-item" data-app="settings">SETTINGS</div>
+                <div class="menu-item" data-app="help">HELP</div>
+                <div class="menu-item" id="logoutBtn">LOGOUT</div>
+            </div>
+
+            <!-- 底部信息提示条 -->
+            <div class="info-bar">
+                <span id="info-text">请使用方向键选择选项</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // MVC结构的基本框架
+        
+        // Model - 游戏数据和逻辑
+        const Model = {
+            // 游戏状态
+            state: {
+                authenticated: true,
+                currentScreen: 'terminal',
+                missionProgress: 0,
+                inventory: []
+            },
+            
+            // 命令历史
+            commandHistory: [],
+            currentCommandIndex: -1,
+            
+            // 系统时间
+            currentDate: new Date(1982, 3, 29, 12, 0, 0),
+            
+            // 玩家信息
+            player: {
+                name: "AGENT",
+                rank: "FIELD OPERATIVE",
+                clearance: "LEVEL 3"
+                
+            },
+            
+            // 方向键选择系统
+            selectionSystem: {
+                // 当前活跃区域: 'menu' 或 'app'
+                activeZone: 'menu',
+                // 当前选中的索引
+                menuIndex: 0,
+                appIndex: 0,
+                // 可选择的元素
+                menuItems: [],
+                appItems: [],
+                
+                // 初始化可选择的元素
+                init: function() {
+                    this.menuItems = Array.from(document.querySelectorAll('.menu-item'));
+                    this.updateHighlight();
+                },
+                
+                // 在菜单中移动
+                moveUp: function() {
+                    if (this.activeZone === 'menu') {
+                        this.menuIndex = (this.menuIndex - 1 + this.menuItems.length) % this.menuItems.length;
+                    } else {
+                        // 应用内移动逻辑
+                    }
+                    this.updateHighlight();
+                },
+                
+                moveDown: function() {
+                    if (this.activeZone === 'menu') {
+                        this.menuIndex = (this.menuIndex + 1) % this.menuItems.length;
+                    } else {
+                        // 应用内移动逻辑
+                    }
+                    this.updateHighlight();
+                },
+                
+                // 更新高亮状态
+                updateHighlight: function() {
+                    // 移除所有高亮
+                    this.menuItems.forEach(item => item.classList.remove('selected'));
+                    
+                    // 设置新的高亮
+                    if (this.activeZone === 'menu' && this.menuItems.length > 0) {
+                        this.menuItems[this.menuIndex].classList.add('selected');
+                        
+                        // 更新底部信息栏
+                        const selectedText = this.menuItems[this.menuIndex].textContent;
+                        View.updateInfoBar(`SELECT: ${selectedText}`);
+                    }
+                },
+                
+                // 激活当前选择
+                activateSelection: function() {
+                    if (this.activeZone === 'menu') {
+                        const selectedItem = this.menuItems[this.menuIndex];
+                        selectedItem.click();
+                    }
+                }
+            },
+            // 命令处理
+            processCommand: function(command) {
+                if (!command) return '';
+                
+                this.commandHistory.push(command);
+                this.currentCommandIndex = this.commandHistory.length;
+                
+                // 登录逻辑
+                if (!this.state.authenticated) {
+                    if (command.toLowerCase() === "login") {
+                        this.state.authenticated = true;
+                        return "ACCESS GRANTED\nWELCOME AGENT\n\nTYPE 'HELP' FOR AVAILABLE COMMANDS.";
+                    } else {
+                        return "ERROR: UNAUTHORIZED ACCESS ATTEMPT\nUSE 'LOGIN' COMMAND TO PROCEED.";
+                    }
+                }
+                
+                // 命令解析
+                const cmd = command.toLowerCase();
+                
+                // 基本命令
+                if (cmd === "help") {
+                    return "AVAILABLE COMMANDS:\n" +
+                           "- HELP: Display this help message\n" +
+                           "- STATUS: Show mission status\n" +
+                           "- CLEAR: Clear terminal screen\n" +
+                           "- EXIT: Logout of system\n" +
+                           "- RUN [PROGRAM]: Launch program\n" +
+                           "- LIST: List available programs";
+                } else if (cmd === "status") {
+                    return `MISSION STATUS: IN PROGRESS (${this.state.missionProgress}%)\n` +
+                           `AGENT: ${this.player.name}\n` +
+                           `RANK: ${this.player.rank}\n` +
+                           `CLEARANCE: ${this.player.clearance}`;
+                } else if (cmd === "clear") {
+                    return "CLEAR_SCREEN";
+                } else if (cmd === "exit" || cmd === "logout") {
+                    this.state.authenticated = false;
+                    return "LOGOUT SUCCESSFUL\nSYSTEM LOCKED";
+                } else if (cmd === "list") {
+                    return "AVAILABLE PROGRAMS:\n" +
+                           "- FILE: File browser\n" +
+                           "- DOSSIER: Personnel database\n" +
+                           "- DECRYPT: Decryption utility\n" +
+                           "- COMMS: Communications system\n" +
+                           "- MAP: World map utility\n" +
+                           "- MISSION: Mission details";
+                } else if (cmd.startsWith("run ")) {
+                    const app = cmd.substring(4).trim();
+                    if (app === "file") {
+                        return "LAUNCH_APP:fileExplorer";
+                    } else if (app === "dossier") {
+                        return "LAUNCH_APP:dossierSystem";
+                    } else if (app === "decrypt") {
+                        return "LAUNCH_APP:decryptTool";
+                    } else if (app === "comms" || app === "map" || app === "mission") {
+                        return `LAUNCHING ${app.toUpperCase()}...\nERROR: MODULE NOT AVAILABLE IN DEMO VERSION.`;
+                    } else {
+                        return `ERROR: PROGRAM '${app}' NOT FOUND.`;
+                    }
+                }
+                
+                // 默认响应
+                return `COMMAND NOT RECOGNIZED: ${command}\nTYPE 'HELP' FOR AVAILABLE COMMANDS.`;
+            }
+        };
+        
+        // View - 处理界面显示
+        const View = {
+            terminal: document.getElementById('terminal'),
+            output: document.getElementById('output'),
+            input: document.getElementById('user-input'),
+            clock: document.getElementById('clock'),
+            
+            // 添加文本到终端
+            writeToTerminal: function(text) {
+                if (text === "CLEAR_SCREEN") {
+                    this.output.innerHTML = "";
+                    return;
+                }
+                
+                if (text.startsWith("LAUNCH_APP:")) {
+                    const appName = text.split(":")[1];
+                    Controller.launchApp(appName);
+                    return;
+                }
+                
+                this.output.innerHTML += '\n' + text;
+                this.scrollToBottom();
+            },
+            
+            // 清除输入
+            clearInput: function() {
+                this.input.value = '';
+            },
+            
+            // 滚动到底部
+            scrollToBottom: function() {
+                this.terminal.scrollTop = this.terminal.scrollHeight;
+            },
+            
+            // 更新时钟
+            updateClock: function() {
+                const date = Model.currentDate;
+                const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                const formattedTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+                this.clock.textContent = `${formattedDate} ${formattedTime}`;
+            },
+            
+            // 启动动画
+            bootSequence: function() {
+                this.terminal.classList.add('flicker-effect');
+                setTimeout(() => {
+                    this.terminal.classList.remove('flicker-effect');
+                }, 2000);
+            },
+            
+            // 显示应用程序
+            showApp: function(appId) {
+                // 隐藏所有应用程序
+                document.querySelectorAll('.app-window').forEach(app => {
+                    app.style.display = 'none';
+                });
+                
+                // 隐藏终端
+                this.terminal.style.display = 'none';
+                
+                // 显示请求的应用程序
+                if (appId === 'terminal') {
+                    this.terminal.style.display = 'block';
+                    this.input.focus();
+                } else {
+                    const app = document.getElementById(appId);
+                    if (app) {
+                        app.style.display = 'block';
+                    }
+                }
+                
+                Model.state.currentScreen = appId;
+            },
+
+            updateInfoBar: function(text) {
+                const infoText = document.getElementById('info-text');
+                if (infoText) {
+                    infoText.textContent = text;
+                }
+            }
+        };
+        
+        // Controller - 处理用户输入和连接Model与View
+        const Controller = {
+            init: function() {
+                // 初始化事件监听
+                View.input.addEventListener('keydown', this.handleInput.bind(this));
+                document.getElementById('power-btn').addEventListener('click', this.reboot.bind(this));
+                document.getElementById('logoutBtn').addEventListener('click', this.logout.bind(this));
+                
+                // 添加菜单项点击事件
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    const appId = item.getAttribute('data-app');
+                    if (appId) {
+                        item.addEventListener('click', () => this.launchApp(appId));
+                    }
+                });
+                
+                // 添加关闭按钮事件
+                document.querySelectorAll('.close-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.launchApp('terminal'));
+                });
+                
+                // 时钟更新
+                this.startClock();
+                
+                // 自动聚焦到输入框
+                View.input.focus();
+
+                // 键盘事件监听
+                document.addEventListener('keydown', (e) => {
+                    // 如果当前焦点在输入框上，使用原有的命令历史导航
+                    if (document.activeElement === View.input) {
+                        if (e.key === 'ArrowUp') {
+                            if (Model.currentCommandIndex > 0) {
+                                Model.currentCommandIndex--;
+                                View.input.value = Model.commandHistory[Model.currentCommandIndex];
+                            }
+                            e.preventDefault();
+                        } else if (e.key === 'ArrowDown') {
+                            if (Model.currentCommandIndex < Model.commandHistory.length - 1) {
+                                Model.currentCommandIndex++;
+                                View.input.value = Model.commandHistory[Model.currentCommandIndex];
+                            } else {
+                                Model.currentCommandIndex = Model.commandHistory.length;
+                                View.input.value = '';
+                            }
+                            e.preventDefault();
+                        }
+                    } 
+                    // 如果焦点不在输入框上，使用菜单导航
+                    else {
+                        if (e.key === 'ArrowUp') {
+                            Model.selectionSystem.moveUp();
+                            e.preventDefault();
+                        } else if (e.key === 'ArrowDown') {
+                            Model.selectionSystem.moveDown();
+                            e.preventDefault();
+                        } else if (e.key === 'Enter') {
+                            Model.selectionSystem.activateSelection();
+                            e.preventDefault();
+                        }
+                    }
+                });
+
+                // 确保焦点切换正常工作
+                View.blurInput = function() {
+                    this.input.blur();
+                };
+
+                // 当点击菜单区域时切换焦点
+                document.querySelector('.menu-panel').addEventListener('click', function() {
+                    View.blurInput();
+                });
+
+                // 当点击终端区域时聚焦到输入框
+                View.terminal.addEventListener('click', function(e) {
+                    if (e.target === View.terminal) {
+                        View.input.focus();
+                    }
+                });
+                
+                // 初始化选择系统
+                Model.selectionSystem.init();
+            },
+            
+            handleInput: function(e) {
+                // 回车键处理命令
+                if (e.key === 'Enter') {
+                    const command = View.input.value.trim();
+                    View.writeToTerminal(`> ${command}`);
+                    const response = Model.processCommand(command);
+                    View.writeToTerminal(response);
+                    View.clearInput();
+                    e.preventDefault();
+                }
+                // 上下箭头导航命令历史
+                else if (e.key === 'ArrowUp') {
+                    if (Model.currentCommandIndex > 0) {
+                        Model.currentCommandIndex--;
+                        View.input.value = Model.commandHistory[Model.currentCommandIndex];
+                    }
+                    e.preventDefault();
+                }
+                else if (e.key === 'ArrowDown') {
+                    if (Model.currentCommandIndex < Model.commandHistory.length - 1) {
+                        Model.currentCommandIndex++;
+                        View.input.value = Model.commandHistory[Model.currentCommandIndex];
+                    } else {
+                        Model.currentCommandIndex = Model.commandHistory.length;
+                        View.input.value = '';
+                    }
+                    e.preventDefault();
+                }
+            },
+            
+            // 启动应用程序
+            launchApp: function(appId) {
+                // 对login菜单项做特殊处理，登出状态下也允许访问
+                if (appId === 'login') {
+                    if (Model.state.authenticated) {
+                        View.writeToTerminal("NOTICE: ALREADY LOGGED IN AS AGENT.");
+                    } else {
+                        Model.state.authenticated = true;
+                        View.writeToTerminal("LOGIN SUCCESSFUL. WELCOME AGENT.");
+                    }
+                    View.showApp('terminal');
+                    return;
+                }
+                
+                // 对其他菜单项进行权限检查
+                if (!Model.state.authenticated && appId !== 'terminal') {
+                    View.writeToTerminal("ERROR: AUTHENTICATION REQUIRED");
+                    return;
+                }
+                
+                if (appId === 'settings') {
+                    View.writeToTerminal("LAUNCHING SETTINGS MODULE...\nSYSTEM SETTINGS NOT AVAILABLE IN CURRENT TERMINAL VERSION.");
+                    View.showApp('terminal');
+                    return;
+                }
+                
+                // 显示请求的应用程序
+                View.showApp(appId);
+            },
+            
+            // 注销
+            logout: function() {
+                Model.state.authenticated = false;
+                View.showApp('terminal');
+                View.writeToTerminal("LOGOUT SUCCESSFUL\nSYSTEM LOCKED");
+            },
+            
+            // 重启系统
+            reboot: function() {
+                Model.state.authenticated = true; // 确保重启后仍然是登录状态
+                View.showApp('terminal');
+                View.output.innerHTML = 'SYSTEM REBOOTING...\n';
+                
+                setTimeout(() => {
+                    View.bootSequence();
+                    View.output.innerHTML = 
+                        'INITIALIZING...\n' +
+                        'CENTRAL INTELLIGENCE AGENCY\n' +
+                        'SECURE TERMINAL V3.2.1 [1982-04-29]\n' +
+                        'TOP SECRET - AUTHORIZED PERSONNEL ONLY\n' +
+                        'AGENT AUTHENTICATED. SYSTEM READY.'; 
+                }, 1000);
+            },
+            
+            // 启动时钟
+            startClock: function() {
+                setInterval(() => {
+                    // 增加一秒
+                    Model.currentDate.setSeconds(Model.currentDate.getSeconds() + 1);
+                    View.updateClock();
+                }, 1000);
+            }
+        };
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            Controller.init();
+            View.bootSequence();
+
+            View.output.innerHTML = 
+                'CENTRAL INTELLIGENCE AGENCY\n' +
+                'SECURE TERMINAL V3.2.1 [1982-04-29]\n' +
+                'TOP SECRET - AUTHORIZED PERSONNEL ONLY\n' +
+                'AGENT AUTHENTICATED. SYSTEM READY.'
+            
+            // 确保点击页面任何地方但不是菜单或应用程序时都会聚焦到输入框
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.menu-panel') && 
+                    !e.target.closest('.app-window') && 
+                    !e.target.closest('input') && 
+                    !e.target.closest('button') && 
+                    !e.target.closest('textarea')) {
+                    if (Model.state.currentScreen === 'terminal') {
+                        View.input.focus();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
