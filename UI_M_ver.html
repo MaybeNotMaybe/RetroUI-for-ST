@@ -1680,13 +1680,22 @@
             // 显示列表视图
             showListView: function() {
                 this.currentView = 'list';
-                document.getElementById('mail-detail-view').style.display = 'none';
-                document.getElementById('mail-list-view').style.display = 'block';
+                document.getElementById('file-detail-view').style.display = 'none';
+                document.getElementById('file-list-view').style.display = 'block';
                 
-                // 重新加载邮件列表（以反映读取状态变化）
-                this.renderMailList();
-
-                UserInterfaceView.updateInfoBar("MAIL LIST: USE ARROWS to NAVIGATE, ENTER to VIEW, ESC to EXIT");
+                // 明确设置活动状态为true，防止焦点丢失
+                this.isActive = true;
+                
+                // 确保导航控制器保持在应用模式
+                NavigationController.setFocusMode('app');
+                
+                // 更新信息栏
+                UserInterfaceView.updateInfoBar("FILE BROWSER: USE ARROWS to NAVIGATE, ENTER to OPEN, BACKSPACE for PARENT DIR");
+                
+                // 稍微延迟，确保DOM更新后再更新选择
+                setTimeout(() => {
+                    this.updateSelection();
+                }, 10);
             },
             
             // 查看选中的邮件
@@ -1819,12 +1828,29 @@
                         }, 50);
                     }
                 });
+
+                // 确保点击文件浏览器区域时设置焦点
+                document.getElementById('fileExplorer').addEventListener('click', (e) => {
+                    // 避免与具体项的点击事件冲突
+                    if (e.target.id === 'fileExplorer' || 
+                        e.target.className.includes('window-content') ||
+                        e.target.className.includes('file-list-view') ||
+                        e.target.className.includes('file-detail-view')) {
+                        
+                        this.isActive = true;
+                        NavigationController.setFocusMode('app');
+                    }
+                });
             },
             
             // 初始化事件监听器
             initEventListeners: function() {
                 // 返回按钮点击事件
                 document.querySelector('.file-back-btn').addEventListener('click', () => {
+                    // 确保设置活动状态，防止焦点跳转到菜单
+                    this.isActive = true;
+                    NavigationController.setFocusMode('app');
+                    
                     this.showListView();
                 });
                 
@@ -1865,18 +1891,19 @@
                     // 仅当文件应用活动时处理键盘事件
                     if (!this.isActive || SystemModel.currentScreen !== 'fileExplorer') return;
                     
-                    // ESC键处理 - 必须放在视图检查前面，确保在任何状态都能处理
+                    // ESC键处理
                     if (e.key === 'Escape') {
                         if (this.currentView === 'detail') {
-                            // 详情视图返回列表
+                            // 在详情视图时，ESC返回列表视图
+                            e.stopPropagation(); // 阻止事件冒泡，防止被NavigationController捕获
                             this.showListView();
                         } else if (this.currentPath !== "") {
                             // 非根目录返回上级
+                            e.stopPropagation();
                             this.navigateToParentDirectory();
                         } else {
-                            // 根目录直接退出应用
-                            EventBus.publish('app:close');
-                            NavigationController.setFocusMode('system');
+                            // 根目录时，让事件冒泡到NavigationController，关闭应用
+                            // 不需要特殊处理
                         }
                         e.preventDefault();
                         return;
@@ -2025,8 +2052,15 @@
                     
                     // 添加点击事件
                     row.addEventListener('click', () => {
+                        // 设置活动状态和焦点模式
+                        this.isActive = true;
+                        NavigationController.setFocusMode('app');
+                        
+                        // 更新选中项
                         this.selectedIndex = index;
                         this.updateSelection();
+                        
+                        // 打开选中项
                         this.openSelectedItem();
                     });
                     
@@ -2074,6 +2108,10 @@
                 // 切换到详情视图
                 this.currentView = 'detail';
                 this.ensureViewState();
+                
+                // 确保保持活动状态和应用焦点模式
+                this.isActive = true;
+                NavigationController.setFocusMode('app');
                 
                 // 更新信息栏
                 UserInterfaceView.updateInfoBar("FILE CONTENT: BACKSPACE or LEFT ARROW to RETURN");
@@ -2222,19 +2260,33 @@
             
             // 处理键盘导航
             handleKeyNavigation: function(e) {
-                // 如果在应用模式下，不要处理菜单导航键
-                if (this.focusMode === 'app') {
-                    // 只处理ESC键
-                    if (e.key === 'Escape') {
-                        // 从应用模式退出到系统菜单
-                        this.setFocusMode('system');
-                        this.switchFocus('menu');
-                        
-                        // 触发应用退出事件
-                        EventBus.publish('app:requestExit');
-                        e.preventDefault();
-                    }
-                    return; // 在应用模式下不处理其他键
+                    // 如果在应用模式下，不要处理菜单导航键
+                    if (this.focusMode === 'app') {
+                        // 只处理ESC键
+                        if (e.key === 'Escape') {
+                            // 检查是否是文件浏览器的详情视图
+                            if (SystemModel.currentScreen === 'fileExplorer' && 
+                                FileView && FileView.currentView === 'detail') {
+                                // 让FileView处理这个事件
+                                return; // 不执行后续代码
+                            }
+                            
+                            // 检查是否是文件浏览器的非根目录
+                            if (SystemModel.currentScreen === 'fileExplorer' && 
+                                FileView && FileView.currentPath !== "") {
+                                // 让FileView处理这个事件
+                                return; // 不执行后续代码
+                            }
+                            
+                            // 从应用模式退出到系统菜单 (其他情况)
+                            this.setFocusMode('system');
+                            this.switchFocus('menu');
+                            
+                            // 触发应用退出事件
+                            EventBus.publish('app:requestExit');
+                            e.preventDefault();
+                        }
+                        return; // 在应用模式下不处理其他键
                 }
                 
                 // 系统模式下的ESC键处理

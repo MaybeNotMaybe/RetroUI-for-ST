@@ -1,0 +1,657 @@
+/* 全局样式 */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1/1;
+    overflow: hidden;
+    font-family: monospace;
+    background-color: #111;
+}
+
+/* CRT显示器外壳 */
+.crt-container {
+    position: relative;
+    width: 95%;
+    height: 90%;
+    max-width: 1200px;
+    margin: 2% auto;
+    background-color: #222;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* 屏幕效果 */
+.screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+    display: flex;
+    /* 添加双线边框 */
+    border: 2px solid #e3af00;
+    outline: 1px solid #e3af00;
+    outline-offset: -4px;
+}
+
+/* CRT效果：扫描线 */
+.screen::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* CRT效果：轻微辉光 */
+.screen::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow: inset 0 0 30px rgba(200, 175, 20, 0.1);
+    pointer-events: none;
+    z-index: 9;
+}
+
+/* 左侧程序窗口 */
+.program-window {
+    flex: 1;
+    border-right: 1px solid #e3af00;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 右侧菜单 */
+.menu-panel {
+    width: 180px;
+    padding: 10px;
+    overflow-y: auto;
+    user-select: none;
+}
+
+/* 菜单标题 */
+.menu-title {
+    color: #e3af00;
+    text-align: center;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e3af00;
+}
+
+/* 用户信息区域样式 */
+.user-profile {
+    text-align: center;
+    padding: 15px 5px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #e3af00;
+}
+
+/* 头像容器 */
+.avatar-container {
+    position: relative;
+    width: 90%;
+    height: auto;
+    aspect-ratio: 3/4;
+    margin: 0 auto 10px;
+    cursor: pointer;
+    border: 2px solid #e3af00;
+    overflow: hidden;
+}
+
+/* 默认头像 */
+#user-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background-color: #222;
+}
+
+/* CRT扫描线效果叠加层 */
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* 用户名样式 */
+#user-name {
+    color: #e3af00;
+    font-size: 14px;
+    text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+    margin-top: 5px;
+}
+
+/* 马赛克效果 - 登出状态 */
+.pixelated {
+    image-rendering: pixelated;
+    filter: brightness(0.7) contrast(1.2) blur(1px);
+}
+
+/* 头像上传悬停效果 */
+.avatar-container:hover::before {
+    content: "UPLOAD";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    color: #e3af00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+/* 菜单项 */
+.menu-item {
+    color: #e3af00;
+    padding: 6px 10px;
+    margin: 4px 0;
+    cursor: pointer;
+    border: 1px solid transparent;
+    text-shadow: 0 0 5px rgba(227, 175, 0, 0.3);
+}
+
+.menu-item:hover {
+    border: 1px solid #e3af00;
+    background-color: rgba(227, 175, 0, 0.1);
+    text-shadow: 0 0 8px rgba(227, 175, 0, 0.6);
+}
+
+/* 终端内容区域 */
+.terminal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 15px;
+    padding-top: 35px; /* 为顶部状态栏留出空间 */
+    color: #e3af00;
+    font-family: "Courier New", monospace;
+    font-size: 16px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-y: auto;
+    text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+    background-color: #000;
+}
+
+/* 输出历史区域 */
+.terminal-output {
+    margin-bottom: 20px;
+}
+
+/* 当前命令行 */
+.current-command-line {
+    display: flex;
+    align-items: center;
+    position: relative;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+/* 命令提示符和输入区域 */
+.command-line {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    width: 100%;
+    position: relative;
+}
+
+.prompt {
+    color: #e3af00;
+    margin-right: 8px;
+}
+
+/* 可见命令文本 */
+#command-text {
+    color: #e3af00;
+    white-space: pre;
+}
+
+/* 输入框包装器 */
+.input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.input-container {
+    position: relative;
+    flex-grow: 1;
+}
+
+/* 输入框 */
+#user-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    height: 1px;
+    width: 1px;
+    z-index: -1;
+}
+
+/* 闪烁的光标 */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* 光标 */
+.cursor {
+    display: inline-block;
+    width: 10px;
+    height: 18px;
+    background-color: #e3af00;
+    animation: blink 1s infinite;
+    margin-left: 2px;
+}
+
+.input-focus .cursor {
+    background-color: #e3af00;
+    box-shadow: 0 0 8px rgba(227, 175, 0, 0.8);
+}
+
+/* 终端内容区域尾部 */
+        
+/* 应用窗口 */
+.app-window {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 5px;
+    padding-top: 35px;  /* 增加顶部padding */
+    color: #e3af00;
+    overflow-y: auto;
+}
+
+/* 选中项的样式 */
+.menu-item.selected {
+    background-color: rgba(227, 175, 0, 0.4);
+    border: 1px solid #e3af00;
+    color: #e3af00;  /* 从#000改回为#e3af00 */
+    text-shadow: 0 0 8px rgba(227, 175, 0, 0.8);  /* 增强文字发光效果 */
+}
+
+/* 窗口标题栏 */
+.window-title {
+    border-bottom: 1px solid #e3af00;
+    padding: 5px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+}
+
+.close-btn {
+    cursor: pointer;
+}
+
+/* 窗口内容 */
+.window-content {
+    padding: 5px;
+}
+
+/* 应用程序特定样式 */
+.file-item {
+    padding: 3px;
+    cursor: pointer;
+    margin: 2px 0;
+}
+
+.file-item:hover {
+    background-color: rgba(227, 175, 0, 0.2);
+}
+
+/* 邮件客户端样式头部 */
+.mail-header {
+    display: flex;
+    padding: 5px 0;
+    border-bottom: 1px solid #e3af00;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.mail-row {
+    display: flex;
+    padding: 3px 0;
+    cursor: pointer;
+    margin-bottom: 3px;
+    border-bottom: 1px dotted rgba(227, 175, 0, 0.3);
+}
+
+.mail-row:hover {
+    background-color: rgba(227, 175, 0, 0.2);
+}
+
+.mail-row.selected {
+    background-color: rgba(227, 175, 0, 0.4);
+    border-bottom: 1px solid #e3af00;
+}
+
+.mail-col-id {
+    width: 30px;
+    text-align: center;
+}
+
+.mail-col-status {
+    width: 80px;
+}
+
+.mail-col-date {
+    width: 100px;
+}
+
+.mail-col-sender {
+    width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mail-col-subject {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 邮件详情视图样式 */
+.mail-detail-header {
+    margin-bottom: 15px;
+}
+
+.mail-detail-nav {
+    margin-bottom: 10px;
+}
+
+.mail-back-btn, .mail-prev-btn, .mail-next-btn {
+    cursor: pointer;
+    margin-right: 15px;
+}
+
+.mail-back-btn:hover, .mail-prev-btn:hover, .mail-next-btn:hover {
+    text-decoration: underline;
+}
+
+.mail-detail-info div {
+    margin-bottom: 5px;
+}
+
+.mail-separator {
+    margin: 10px 0;
+    padding: 5px 0;
+    border-top: 1px solid #e3af00;
+    border-bottom: 1px solid #e3af00;
+    text-align: center;
+}
+
+.mail-detail-content {
+    white-space: pre-wrap;
+    line-height: 1.5;
+    padding: 10px 0;
+    min-height: 200px;
+}
+
+.mail-footer {
+    margin-top: 20px;
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px solid #e3af00;
+}
+
+/* 未读邮件样式 */
+.mail-unread {
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(227, 175, 0, 0.8);
+}
+
+/* 邮件客户端样式尾部 */
+
+/* 文件浏览器样式头部 */
+.file-header {
+    display: flex;
+    padding: 5px 0;
+    border-bottom: 1px solid #e3af00;
+    margin-bottom: 10px;
+}
+
+.file-path-display {
+    flex: 1;
+    font-weight: bold;
+}
+
+.file-item {
+    display: flex;
+    padding: 5px 0;
+    cursor: pointer;
+    margin-bottom: 3px;
+    border-bottom: 1px dotted rgba(227, 175, 0, 0.3);
+}
+
+.file-item:hover {
+    background-color: rgba(227, 175, 0, 0.2);
+}
+
+.file-item.selected {
+    background-color: rgba(227, 175, 0, 0.4);
+    border-bottom: 1px solid #e3af00;
+}
+
+.file-icon {
+    width: 24px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+.file-name {
+    flex: 1;
+}
+
+/* 文件详情视图样式 */
+.file-detail-header {
+    margin-bottom: 15px;
+}
+
+.file-detail-nav {
+    margin-bottom: 10px;
+}
+
+.file-back-btn {
+    cursor: pointer;
+    margin-right: 15px;
+}
+
+.file-back-btn:hover {
+    text-decoration: underline;
+}
+
+.file-detail-info div {
+    margin-bottom: 5px;
+}
+
+.file-separator {
+    margin: 10px 0;
+    padding: 5px 0;
+    border-top: 1px solid #e3af00;
+    border-bottom: 1px solid #e3af00;
+    text-align: center;
+}
+
+.file-detail-content {
+    white-space: pre-wrap;
+    line-height: 1.5;
+    padding: 10px 0;
+    min-height: 200px;
+}
+
+.file-footer {
+    margin-top: 20px;
+    text-align: center;
+    padding-top: 10px;
+    border-top: 1px solid #e3af00;
+}
+
+.up-directory {
+    font-weight: bold;
+}
+
+/* 文件浏览器样式尾部 */
+
+/* 状态栏 */
+.status-bar {
+    position: absolute;
+    top: 0;          /* 从bottom: 0改为top: 0 */
+    left: 0;
+    right: 0;
+    height: 25px;
+    border-bottom: 1px solid #e3af00;  /* 从border-top改为border-bottom */
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    align-items: center;
+    color: #e3af00;
+    background-color: rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+    z-index: 5;      /* 确保它在其他元素之上 */
+}
+
+/* 终端头部样式 */
+.terminal-header-line {
+    text-align: left;
+    padding-left: 30px; /* 给左侧留出一定空间 */
+}
+
+/* 开机动画效果 */
+@keyframes flicker {
+    0% { opacity: 0.8; }
+    5% { opacity: 0.5; }
+    10% { opacity: 0.8; }
+    15% { opacity: 0.9; }
+    20% { opacity: 0.7; }
+    25% { opacity: 0.9; }
+    30% { opacity: 0.8; }
+    35% { opacity: 1.0; }
+    40% { opacity: 0.7; }
+    45% { opacity: 0.9; }
+    50% { opacity: 1.0; }
+    55% { opacity: 0.8; }
+    60% { opacity: 0.9; }
+    100% { opacity: 1.0; }
+}
+
+/* 开机后应用闪烁效果 */
+.flicker-effect {
+    animation: flicker 2s ease-in-out;
+}
+
+/* 加载动画 */
+@keyframes loading {
+    0% { content: ".  "; }
+    33% { content: ".. "; }
+    66% { content: "..."; }
+    100% { content: ".  "; }
+}
+
+.loading::after {
+    content: ".  ";
+    animation: loading 1.5s infinite steps(1);
+}
+
+/* 电源按钮 */
+.power-button {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 15px;
+    height: 15px;
+    background-color: #444;
+    border: 2px solid #333;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.power-button:active {
+    background-color: #e3af00;
+    box-shadow: 0 0 10px rgba(227, 175, 0, 0.7);
+}
+
+/* 底部信息栏样式 */
+.info-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background-color: #e3af00;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    z-index: 100;
+}
+
+/* 隐藏所有滚动条 */
+/* Chrome, Safari, Edge 等基于webkit的浏览器 */
+::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+    display: none;
+}
+
+/* 适用于Firefox */
+* {
+    scrollbar-width: none;
+}
+
+/* 确保全局没有滚动条 */
+html, body {
+    overflow: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+/* 确保含滚动内容的容器不显示滚动条但保留滚动功能 */
+.terminal, .app-window, .menu-panel, .window-content {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overflow-y: auto;
+}
+
+.terminal::-webkit-scrollbar, 
+.app-window::-webkit-scrollbar, 
+.menu-panel::-webkit-scrollbar,
+.window-content::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+    display: none;
+}
