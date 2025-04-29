@@ -232,6 +232,7 @@
         /* 可见命令文本 */
         #command-text {
             color: #e3af00;
+            white-space: pre;
         }
 
         /* 输入框包装器 */
@@ -822,9 +823,27 @@
                 
                 // 仅在元素存在时设置事件
                 if (this.input && this.commandText) {
-                    // 设置输入事件
+                    // 修改输入事件处理
                     this.input.addEventListener('input', () => {
+                        // 更新显示文本
                         this.commandText.textContent = this.input.value;
+                        
+                        // 立即更新光标位置
+                        if (typeof this.updateCursorPosition === 'function') {
+                            this.updateCursorPosition();
+                        }
+                    });
+                    
+                    // 特别处理空格键
+                    this.input.addEventListener('keydown', (e) => {
+                        if (e.key === ' ') {
+                            // 阻止默认行为并手动处理空格
+                            setTimeout(() => {
+                                if (typeof this.updateCursorPosition === 'function') {
+                                    this.updateCursorPosition();
+                                }
+                            }, 10);
+                        }
                     });
                     
                     // 初始焦点
