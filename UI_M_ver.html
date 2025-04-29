@@ -1865,6 +1865,23 @@
                     // 仅当文件应用活动时处理键盘事件
                     if (!this.isActive || SystemModel.currentScreen !== 'fileExplorer') return;
                     
+                    // ESC键处理 - 必须放在视图检查前面，确保在任何状态都能处理
+                    if (e.key === 'Escape') {
+                        if (this.currentView === 'detail') {
+                            // 详情视图返回列表
+                            this.showListView();
+                        } else if (this.currentPath !== "") {
+                            // 非根目录返回上级
+                            this.navigateToParentDirectory();
+                        } else {
+                            // 根目录直接退出应用
+                            EventBus.publish('app:close');
+                            NavigationController.setFocusMode('system');
+                        }
+                        e.preventDefault();
+                        return;
+                    }
+                    
                     // 确保视图状态与实际显示一致
                     this.ensureViewState();
                     
@@ -1959,6 +1976,20 @@
                     container.innerHTML = '<div class="no-file-message">DIRECTORY EMPTY</div>';
                     return;
                 }
+                
+                // 排序文件列表：父目录优先，然后是目录，最后是文件
+                this.displayedFiles.sort((a, b) => {
+                    // 父目录(..)始终在最前
+                    if (a.isParentDir) return -1;
+                    if (b.isParentDir) return 1;
+                    
+                    // 目录在文件前面
+                    if (a.type === 'DIR' && b.type !== 'DIR') return -1;
+                    if (a.type !== 'DIR' && b.type === 'DIR') return 1;
+                    
+                    // 同类型按名称排序
+                    return a.title.localeCompare(b.title);
+                });
                 
                 // 创建文件列表项
                 this.displayedFiles.forEach((file, index) => {
@@ -2428,6 +2459,12 @@
                     return;
                 }
 
+                if (appId === 'fileExplorer') {
+                    // 直接调用FileController的方法
+                    FileController.openFileExplorer();
+                    return;
+                }
+
                 if (appId === 'mail') {
                     // 在打开邮件应用前先重置状态
                     if (MailView) {
@@ -2617,6 +2654,13 @@
                     return;
                 }
                 
+                // 检查文件系统数据
+                console.log("打开文件浏览器, 检查文件数据:", SaveManager.gameData.files);
+                if (!SaveManager.gameData.files || !SaveManager.gameData.files.list || SaveManager.gameData.files.list.length === 0) {
+                    console.log("文件数据为空，尝试初始化");
+                    SaveManager.FileDataModule.initDefaultFiles();
+                }
+
                 // 重置文件视图状态
                 FileView.selectedIndex = 0;
                 FileView.currentView = 'list';
@@ -2754,10 +2798,24 @@
             // 初始化存档系统
             init: function() {
                 this.loadAllData();
-                // 初始化默认数据（如果需要）
+                
+                // 初始化邮件数据
                 if (this.gameData.emails.length === 0) {
                     this.EmailDataModule.initDefaultEmails();
                 }
+                
+                // 修改这里：确保文件系统一定被初始化
+                // 注意：为测试目的可以添加强制初始化
+                console.log("检查文件系统数据:", this.gameData.files);
+                
+                // 如果files不是对象或没有list数组，或是空数组，就初始化
+                if (!this.gameData.files || !this.gameData.files.list || this.gameData.files.list.length === 0) {
+                    console.log("正在初始化默认文件数据...");
+                    this.FileDataModule.initDefaultFiles();
+                }
+                
+                // 调试：检查初始化后的文件
+                console.log("初始化后的文件数据:", this.gameData.files);
             },
             
             // 保存所有游戏数据
@@ -2947,16 +3005,24 @@
                     const files = this.getAllFiles();
                     return files.filter(file => {
                         // 路径匹配逻辑，支持目录层级
-                        const filePath = file.title.split('/');
-                        const requestPath = path.split('/');
-                        
-                        // 如果请求路径是根目录并且文件没有路径分隔符，返回顶级文件
                         if (path === "" || path === "/") {
+                            // 根目录：返回没有/的顶级文件
                             return !file.title.includes('/');
+                        } else {
+                            // 排除当前目录自身
+                            if (file.title === path) {
+                                return false;
+                            }
+                            
+                            // 是否为当前路径的直接子项
+                            if (file.title.startsWith(path + '/')) {
+                                const remainingPath = file.title.substring(path.length + 1);
+                                // 确保没有更深层级的路径（不包含更多的/）
+                                return !remainingPath.includes('/');
+                            }
+                            
+                            return false;
                         }
-                        
-                        // 否则检查路径前缀是否匹配
-                        return file.title.startsWith(path + '/') || file.title === path;
                     });
                 },
                 
@@ -3086,6 +3152,16 @@
                         title: "PERSONNEL/CONTACTS.TXT",
                         content: "EMERGENCY CONTACTS\n\nFIELD OPERATIONS:\nHANDLER: JOHNSON\nCODE: OSCAR-DELTA-7\nEMERGENCY LINE: 555-3900\n\nTECHNICAL SUPPORT:\nLEAD: CLARKE\nCODE: TANGO-SIERRA-2\nDIRECT LINE: 555-4017\n\nEXTRACTION TEAM:\nLEAD: MARTINEZ\nCODE: ECHO-XRAY-9\nSTANDBY: 24HR\n\nSAFE HOUSES:\n1. GEORGETOWN - 1429 WISCONSIN AVE\n   PASSPHRASE: \"THE WEATHER IN CHICAGO IS UNPREDICTABLE\"\n\n2. ALEXANDRIA - 227 KING STREET\n   PASSPHRASE: \"I'M LOOKING FOR MY BROTHER'S RECORD COLLECTION\"\n\nMEDICAL:\nDR. WILSON - 555-6332\nCODE: MEDICAL SITUATION ALPHA"
                     });
+
+                    // 在最后增加这些调试和确认保存的代码
+                    console.log("已创建默认文件:", SaveManager.gameData.files.list.length, "个");
+                    
+                    // 确保保存到localStorage
+                    SaveManager.saveData('files', SaveManager.gameData.files);
+                    
+                    // 验证保存
+                    const savedData = localStorage.getItem(SaveManager.SAVE_PREFIX + 'files');
+                    console.log("验证保存数据:", savedData ? "成功" : "失败");
                 }
             },
 
@@ -3103,6 +3179,10 @@
             // 确保DOM完全加载后执行初始化
             setTimeout(() => {
                 try {
+                    // 强制初始化文件系统
+                    SaveManager.FileDataModule.initDefaultFiles();
+                    console.log("已强制初始化文件系统");
+                    
                     App.init();
                 } catch (e) {
                     console.error("初始化错误:", e);
