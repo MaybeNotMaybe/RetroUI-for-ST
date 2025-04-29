@@ -213,6 +213,7 @@
             align-items: center;
             position: relative;
             white-space: nowrap;
+            overflow: visible;
         }
    
         /* 命令提示符和输入区域 */
@@ -790,8 +791,8 @@
 
             // 主界面固定内容
             terminalHeader: `>CENTRAL INTELLIGENCE AGENCY
->SYSTEML V3.2.1 [1982-04-29]
->COPYRIGHT (C) 1982
+>SYSTEML V3.2.1 [1981-10-29]
+>COPYRIGHT (C) 1977
 >SECURE TERMINA - AUTHORIZED PERSONNEL ONLY
 >
 >WEATHER - NEW BOSTON CLOUDY 56F
@@ -954,56 +955,54 @@
                 }
             },
 
+            updateCursorPosition: function() {
+                const input = document.getElementById('user-input');
+                const cursor = document.querySelector('.cursor');
+                const promptElement = document.querySelector('.prompt');
+                
+                // 添加安全检查
+                if (!input || !cursor || !promptElement) return;
+                
+                try {
+                    // 创建临时span来测量文本宽度
+                    const textMeasure = document.createElement('span');
+                    textMeasure.style.font = window.getComputedStyle(input).font;
+                    textMeasure.style.position = 'absolute';
+                    textMeasure.style.visibility = 'hidden';
+                    textMeasure.style.whiteSpace = 'pre';  // 关键：保留空格
+                    textMeasure.textContent = input.value.substring(0, input.selectionStart);
+                    document.body.appendChild(textMeasure);
+                    
+                    // 计算光标位置
+                    const textWidth = textMeasure.getBoundingClientRect().width;
+                    const promptWidth = promptElement.getBoundingClientRect().width;
+                    
+                    // 设置光标位置
+                    cursor.style.left = (promptWidth + textWidth) + 'px';
+                    
+                    document.body.removeChild(textMeasure);
+                } catch (error) {
+                    console.log("光标位置更新出错:", error);
+                }
+            },
+
             // 输入光标
             initCustomCursor: function() {
                 const input = document.getElementById('user-input');
                 const cursor = document.querySelector('.cursor');
-                const cmdLine = document.querySelector('.command-line');
                 
-                // 更新光标位置的函数
-                function updateCursorPosition() {
-                    // 添加安全检查
-                    if (!input || !cursor || !cmdLine) return;
-                    
-                    try {
-                        const inputRect = input.getBoundingClientRect();
-                        const cmdLineRect = cmdLine.getBoundingClientRect();
-                        
-                        // 创建临时span来测量文本宽度
-                        const textMeasure = document.createElement('span');
-                        textMeasure.style.font = window.getComputedStyle(input).font;
-                        textMeasure.style.position = 'absolute';
-                        textMeasure.style.visibility = 'hidden';
-                        textMeasure.style.whiteSpace = 'pre';
-                        textMeasure.textContent = input.value.substring(0, input.selectionStart);
-                        document.body.appendChild(textMeasure);
-                        
-                        // 计算光标位置
-                        const textWidth = textMeasure.getBoundingClientRect().width;
-                        const promptElement = document.querySelector('.prompt');
-                        
-                        if (promptElement) {
-                            const promptWidth = promptElement.getBoundingClientRect().width;
-                            cursor.style.left = (promptWidth + textWidth) + 'px';
-                        }
-                        
-                        document.body.removeChild(textMeasure);
-                    } catch (error) {
-                        console.log("光标位置更新出错:", error);
-                        // 出错时不做任何处理，避免中断程序
-                    }
-                }
+                if (!input || !cursor) return;
                 
                 // 事件监听
-                input.addEventListener('input', updateCursorPosition);
-                input.addEventListener('click', updateCursorPosition);
-                input.addEventListener('keydown', function() {
-                    setTimeout(updateCursorPosition, 0);
+                input.addEventListener('input', () => this.updateCursorPosition());
+                input.addEventListener('click', () => this.updateCursorPosition());
+                input.addEventListener('keydown', () => {
+                    setTimeout(() => this.updateCursorPosition(), 0);
                 });
-                window.addEventListener('resize', updateCursorPosition);
+                window.addEventListener('resize', () => this.updateCursorPosition());
                 
                 // 初始化光标位置
-                setTimeout(updateCursorPosition, 10);
+                setTimeout(() => this.updateCursorPosition(), 10);
                 
                 // 强制聚焦
                 input.focus();
