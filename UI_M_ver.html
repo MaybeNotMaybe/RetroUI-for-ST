@@ -278,6 +278,8 @@
             background-color: #e3af00;
             box-shadow: 0 0 8px rgba(227, 175, 0, 0.8);
         }
+
+        /* 终端内容区域尾部 */
                 
         /* 应用窗口 */
         .app-window {
@@ -330,6 +332,111 @@
         .file-item:hover {
             background-color: rgba(227, 175, 0, 0.2);
         }
+
+        /* 邮件客户端样式头部 */
+        .mail-header {
+            display: flex;
+            padding: 5px 0;
+            border-bottom: 1px solid #e3af00;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .mail-row {
+            display: flex;
+            padding: 3px 0;
+            cursor: pointer;
+            margin-bottom: 3px;
+            border-bottom: 1px dotted rgba(227, 175, 0, 0.3);
+        }
+
+        .mail-row:hover {
+            background-color: rgba(227, 175, 0, 0.2);
+        }
+
+        .mail-row.selected {
+            background-color: rgba(227, 175, 0, 0.4);
+            border-bottom: 1px solid #e3af00;
+        }
+
+        .mail-col-id {
+            width: 30px;
+            text-align: center;
+        }
+
+        .mail-col-status {
+            width: 80px;
+        }
+
+        .mail-col-date {
+            width: 100px;
+        }
+
+        .mail-col-sender {
+            width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .mail-col-subject {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* 邮件详情视图样式 */
+        .mail-detail-header {
+            margin-bottom: 15px;
+        }
+
+        .mail-detail-nav {
+            margin-bottom: 10px;
+        }
+
+        .mail-back-btn, .mail-prev-btn, .mail-next-btn {
+            cursor: pointer;
+            margin-right: 15px;
+        }
+
+        .mail-back-btn:hover, .mail-prev-btn:hover, .mail-next-btn:hover {
+            text-decoration: underline;
+        }
+
+        .mail-detail-info div {
+            margin-bottom: 5px;
+        }
+
+        .mail-separator {
+            margin: 10px 0;
+            padding: 5px 0;
+            border-top: 1px solid #e3af00;
+            border-bottom: 1px solid #e3af00;
+            text-align: center;
+        }
+
+        .mail-detail-content {
+            white-space: pre-wrap;
+            line-height: 1.5;
+            padding: 10px 0;
+            min-height: 200px;
+        }
+
+        .mail-footer {
+            margin-top: 20px;
+            text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid #e3af00;
+        }
+
+        /* 未读邮件样式 */
+        .mail-unread {
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(227, 175, 0, 0.8);
+        }
+
+        /* 邮件客户端样式尾部 */
         
         /* 状态栏 */
         .status-bar {
@@ -538,6 +645,52 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 邮件程序应用 -->
+                <div class="app-window" id="mail">
+                    <div class="window-title">
+                        <span>MAIL CLIENT</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <!-- 邮件列表视图 -->
+                        <div id="mail-list-view">
+                            <div class="mail-header">
+                                <span class="mail-col-id">#</span>
+                                <span class="mail-col-status">STATUS</span>
+                                <span class="mail-col-date">DATE</span>
+                                <span class="mail-col-sender">SENDER</span>
+                                <span class="mail-col-subject">SUBJECT</span>
+                            </div>
+                            <div id="mail-list-container">
+                                <!-- 邮件列表将动态加载 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 邮件详情视图 (初始隐藏) -->
+                        <div id="mail-detail-view" style="display: none;">
+                            <div class="mail-detail-header">
+                                <div class="mail-detail-nav">
+                                    <span class="mail-back-btn">[←BACK]</span>
+                                    <span class="mail-prev-btn">[↑PREV]</span>
+                                    <span class="mail-next-btn">[↓NEXT]</span>
+                                </div>
+                                <div class="mail-detail-info">
+                                    <div class="mail-detail-date">Date: <span id="mail-date"></span></div>
+                                    <div class="mail-detail-from">From: <span id="mail-sender"></span></div>
+                                    <div class="mail-detail-to">To: AGENT@CIA.GOV</div>
+                                    <div class="mail-detail-cc">Cc: ADMIN@CIA.GOV</div>
+                                    <div class="mail-detail-subject">Subject: <span id="mail-subject"></span></div>
+                                </div>
+                            </div>
+                            <div class="mail-separator">CONFIDENTIAL - INTERNAL USE ONLY</div>
+                            <div id="mail-content" class="mail-detail-content"></div>
+                            <div class="mail-footer">
+                                //END OF MESSAGE//
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- 状态栏 -->
                 <div class="status-bar">
@@ -652,14 +805,14 @@
             },
             
             TERMINAL_HEADER: `>CENTRAL INTELLIGENCE AGENCY
-    >SYSTEML V3.2.1 [1981-10-29]
-    >COPYRIGHT (C) 1977
-    >SECURE TERMINA - AUTHORIZED PERSONNEL ONLY
-    >
-    >WEATHER - NEW BOSTON CLOUDY 56F
-    >MAIL -INBOX:0
-    >MUSIC <<[0]>> L'envol - Oil Astral
-    >
+>SYSTEML V3.2.1 [1981-10-29]
+>COPYRIGHT (C) 1977
+>SECURE TERMINA - AUTHORIZED PERSONNEL ONLY
+>
+>WEATHER - NEW BOSTON CLOUDY 56F
+>MAIL -INBOX:0
+>MUSIC <<[0]>> L'envol - Oil Astral
+>
         `
         };
 
@@ -1181,6 +1334,235 @@
             }
         };
 
+        // MailView - 管理邮件界面显示
+        const MailView = {
+            // 当前选中的邮件索引
+            selectedIndex: 0,
+            // 当前显示视图 (list/detail)
+            currentView: 'list',
+            // 当前显示的邮件列表
+            displayedEmails: [],
+            
+            init: function() {
+                this.initEventListeners();
+            },
+            
+            initEventListeners: function() {
+                // 返回按钮点击事件
+                document.querySelector('.mail-back-btn').addEventListener('click', () => {
+                    this.showListView();
+                });
+                
+                // 上一封邮件按钮
+                document.querySelector('.mail-prev-btn').addEventListener('click', () => {
+                    this.navigatePrevMail();
+                });
+                
+                // 下一封邮件按钮
+                document.querySelector('.mail-next-btn').addEventListener('click', () => {
+                    this.navigateNextMail();
+                });
+                
+                // 全局键盘事件监听
+                document.addEventListener('keydown', (e) => {
+                    // 只在邮件应用激活时处理
+                    if (SystemModel.currentScreen !== 'mail') return;
+                    
+                    // ESC 键返回邮件列表
+                    if (e.key === 'Escape' && this.currentView === 'detail') {
+                        this.showListView();
+                        e.preventDefault();
+                    }
+                    
+                    // 左箭头键返回列表
+                    if (e.key === 'ArrowLeft' && this.currentView === 'detail') {
+                        this.showListView();
+                        e.preventDefault();
+                    }
+                    
+                    // 右箭头键查看详情
+                    if (e.key === 'ArrowRight' && this.currentView === 'list') {
+                        this.viewSelectedEmail();
+                        e.preventDefault();
+                    }
+                    
+                    // 上箭头键选择上一封邮件
+                    if (e.key === 'ArrowUp') {
+                        if (this.currentView === 'list') {
+                            this.selectPrevEmail();
+                        } else {
+                            this.navigatePrevMail();
+                        }
+                        e.preventDefault();
+                    }
+                    
+                    // 下箭头键选择下一封邮件
+                    if (e.key === 'ArrowDown') {
+                        if (this.currentView === 'list') {
+                            this.selectNextEmail();
+                        } else {
+                            this.navigateNextMail();
+                        }
+                        e.preventDefault();
+                    }
+                    
+                    // Enter键查看选中邮件
+                    if (e.key === 'Enter' && this.currentView === 'list') {
+                        this.viewSelectedEmail();
+                        e.preventDefault();
+                    }
+                });
+            },
+            
+            // 渲染邮件列表
+            renderMailList: function() {
+                // 获取所有邮件
+                this.displayedEmails = SaveManager.EmailDataModule.getAllEmails();
+                
+                // 按日期降序排序（最新的在最前面）
+                this.displayedEmails.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                const container = document.getElementById('mail-list-container');
+                container.innerHTML = '';
+                
+                if (this.displayedEmails.length === 0) {
+                    container.innerHTML = '<div class="no-mail-message">NO MESSAGES FOUND</div>';
+                    return;
+                }
+                
+                // 创建邮件列表项
+                this.displayedEmails.forEach((email, index) => {
+                    const row = document.createElement('div');
+                    row.className = `mail-row ${index === this.selectedIndex ? 'selected' : ''} ${!email.read ? 'mail-unread' : ''}`;
+                    row.setAttribute('data-index', index);
+                    
+                    // 格式化日期
+                    const date = new Date(email.date);
+                    const formattedDate = `${this.getMonthAbbr(date.getMonth())} ${date.getDate()}`;
+                    
+                    // 组装行内容
+                    row.innerHTML = `
+                        <span class="mail-col-id">${index + 1}</span>
+                        <span class="mail-col-status">[${email.read ? 'Readed' : 'Unread'}]</span>
+                        <span class="mail-col-date">${formattedDate}</span>
+                        <span class="mail-col-sender">${email.sender}</span>
+                        <span class="mail-col-subject">${email.subject}</span>
+                    `;
+                    
+                    // 添加点击事件
+                    row.addEventListener('click', () => {
+                        this.selectedIndex = index;
+                        this.updateSelection();
+                        this.viewSelectedEmail();
+                    });
+                    
+                    container.appendChild(row);
+                });
+            },
+            
+            // 渲染邮件详情
+            renderMailDetail: function(email) {
+                // 标记为已读
+                SaveManager.EmailDataModule.markAsRead(email.id);
+                
+                // 更新UI元素
+                document.getElementById('mail-date').textContent = this.formatDetailDate(email.date);
+                document.getElementById('mail-sender').textContent = `${email.sender}@CIA.GOV`;
+                document.getElementById('mail-subject').textContent = email.subject;
+                document.getElementById('mail-content').textContent = email.content;
+                
+                // 切换到详情视图
+                this.currentView = 'detail';
+                document.getElementById('mail-list-view').style.display = 'none';
+                document.getElementById('mail-detail-view').style.display = 'block';
+            },
+            
+            // 显示列表视图
+            showListView: function() {
+                this.currentView = 'list';
+                document.getElementById('mail-detail-view').style.display = 'none';
+                document.getElementById('mail-list-view').style.display = 'block';
+                
+                // 重新加载邮件列表（以反映读取状态变化）
+                this.renderMailList();
+            },
+            
+            // 查看选中的邮件
+            viewSelectedEmail: function() {
+                if (this.displayedEmails.length === 0) return;
+                
+                const email = this.displayedEmails[this.selectedIndex];
+                if (email) {
+                    this.renderMailDetail(email);
+                }
+            },
+            
+            // 更新选中项的高亮
+            updateSelection: function() {
+                const rows = document.querySelectorAll('.mail-row');
+                rows.forEach((row, index) => {
+                    if (index === this.selectedIndex) {
+                        row.classList.add('selected');
+                        // 确保选中的行可见
+                        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    } else {
+                        row.classList.remove('selected');
+                    }
+                });
+            },
+            
+            // 选择上一封邮件
+            selectPrevEmail: function() {
+                if (this.displayedEmails.length === 0) return;
+                
+                this.selectedIndex = Math.max(0, this.selectedIndex - 1);
+                this.updateSelection();
+            },
+            
+            // 选择下一封邮件
+            selectNextEmail: function() {
+                if (this.displayedEmails.length === 0) return;
+                
+                this.selectedIndex = Math.min(this.displayedEmails.length - 1, this.selectedIndex + 1);
+                this.updateSelection();
+            },
+            
+            // 查看上一封邮件
+            navigatePrevMail: function() {
+                if (this.selectedIndex > 0) {
+                    this.selectedIndex--;
+                    this.viewSelectedEmail();
+                }
+            },
+            
+            // 查看下一封邮件
+            navigateNextMail: function() {
+                if (this.selectedIndex < this.displayedEmails.length - 1) {
+                    this.selectedIndex++;
+                    this.viewSelectedEmail();
+                }
+            },
+            
+            // 将月份数字转换为三字母缩写
+            getMonthAbbr: function(monthIndex) {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return months[monthIndex];
+            },
+            
+            // 格式化详情视图的日期
+            formatDetailDate: function(dateString) {
+                const date = new Date(dateString);
+                const day = date.getDate();
+                const month = this.getMonthAbbr(date.getMonth()).toUpperCase();
+                const year = date.getFullYear().toString().substr(2);
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const seconds = date.getSeconds().toString().padStart(2, '0');
+                
+                return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}-EST`;
+            }
+        };
+
         // NavigationController - 管理焦点和导航
         const NavigationController = {
             currentFocus: 'terminal',
@@ -1433,8 +1815,7 @@
                 }
 
                 if (appId === 'mail') {
-                    TerminalView.appendOutput("LAUNCHING MAIL CLIENT...\nINBOX: EMPTY\nNO NEW MESSAGES.");
-                    this.showTerminal();
+                    MailController.openMailApp();
                     return;
                 }
 
@@ -1478,6 +1859,80 @@
             }
         };
 
+        // MailController - 管理邮件程序
+        const MailController = {
+            init: function() {
+                // 初始化邮件视图
+                MailView.init();
+                
+                // 订阅相关事件
+                this.setupEventListeners();
+
+                // 立即检查未读邮件数量并更新徽章
+                this.checkNewMail();
+                
+                console.log("邮件系统初始化完成"); 
+            },
+            
+            setupEventListeners: function() {
+                // 监听邮件程序启动事件
+                EventBus.subscribe('app:launch', (appId) => {
+                    if (appId === 'mail') {
+                        this.openMailApp();
+                    }
+                });
+                
+                // 监听未读邮件状态变化
+                EventBus.subscribe('mail:unreadChanged', (count) => {
+                    this.updateUnreadBadge(count);
+                });
+            },
+            
+            openMailApp: function() {
+                // 确保用户已登录
+                if (!UserModel.isAuthenticated()) {
+                    TerminalView.appendOutput("ERROR: AUTHENTICATION REQUIRED");
+                    ApplicationController.showTerminal();
+                    return;
+                }
+                
+                // 重置邮件视图状态
+                MailView.selectedIndex = 0;
+                MailView.currentView = 'list';
+                
+                // 显示邮件列表
+                MailView.renderMailList();
+                
+                // 显示邮件应用
+                ApplicationView.showApp('mail');
+                SystemModel.changeScreen('mail');
+                
+                // 确保焦点正确
+                NavigationController.switchFocus('terminal');
+                
+                // 更新底部信息栏
+                UserInterfaceView.updateInfoBar("MAIL: USE ARROWS to NAVIGATE, ENTER to VIEW, ESC to RETURN");
+            },
+            
+            updateUnreadBadge: function(count) {
+                // 获取邮件菜单项
+                const mailMenuItem = document.querySelector('.menu-item[data-app="mail"]');
+                if (mailMenuItem) {
+                    if (count > 0) {
+                        mailMenuItem.textContent = `MAIL [${count}]`;
+                    } else {
+                        mailMenuItem.textContent = "MAIL";
+                    }
+                }
+            },
+            
+            // 检查新邮件并更新徽章
+            checkNewMail: function() {
+                const unreadCount = SaveManager.EmailDataModule.getUnreadCount();
+                this.updateUnreadBadge(unreadCount);
+            }
+        };
+
         // EffectsManager - 管理视觉和音效
         const EffectsManager = {
             init: function() {
@@ -1497,6 +1952,7 @@
                 SystemModel.init();
                 MissionModel.init();
                 TerminalModel.init();
+                SaveManager.init();
                 
                 TerminalView.init();
                 ApplicationView.init();
@@ -1505,18 +1961,19 @@
                 NavigationController.init();
                 TerminalController.init();
                 ApplicationController.init();
+                MailController.init();
                 EffectsManager.init();
                 
                 // 设置事件订阅
                 this.setupEventSubscriptions();
+
+                // 开机后检查新邮件
+                setTimeout(() => {
+                    MailController.checkNewMail();
+                }, 2000);
                 
                 // 初始化完成，启动应用
                 this.start();
-                // 设置事件订阅
-            this.setupEventSubscriptions();
-            
-            // 初始化完成，启动应用
-            this.start();
             },
             
             setupEventSubscriptions: function() {
@@ -1563,6 +2020,193 @@
                 
                 // 设置初始用户信息
                 UserInterfaceView.updateUserProfile(UserModel.profile, UserModel.isAuthenticated());
+            }
+        };
+
+        // SaveManager - 高级游戏存档管理系统
+        const SaveManager = {
+            // 存档数据对象
+            gameData: {
+                emails: [],          // 邮件数据
+                files: {},           // 文件系统数据
+                missions: {},        // 任务数据
+                progress: {},        // 游戏进度
+                dossiers: [],        // 档案数据
+                logs: [],            // 系统日志
+                decrypted: []        // 已解密内容
+            },
+            
+            // 存档标识符前缀
+            SAVE_PREFIX: 'cia_save_',
+            
+            // 初始化存档系统
+            init: function() {
+                this.loadAllData();
+                // 初始化默认数据（如果需要）
+                if (this.gameData.emails.length === 0) {
+                    this.EmailDataModule.initDefaultEmails();
+                }
+            },
+            
+            // 保存所有游戏数据
+            saveAllData: function() {
+                for (const key in this.gameData) {
+                    this.saveData(key, this.gameData[key]);
+                }
+                console.log("已保存所有游戏数据");
+            },
+            
+            // 保存特定模块数据
+            saveData: function(module, data) {
+                const saveKey = this.SAVE_PREFIX + module;
+                StorageManager.save(saveKey, data);
+            },
+            
+            // 加载所有游戏数据
+            loadAllData: function() {
+                for (const key in this.gameData) {
+                    const loadedData = this.loadData(key);
+                    if (loadedData) {
+                        this.gameData[key] = loadedData;
+                    }
+                }
+            },
+            
+            // 加载特定模块数据
+            loadData: function(module) {
+                const saveKey = this.SAVE_PREFIX + module;
+                return StorageManager.load(saveKey);
+            },
+            
+            // 重置所有游戏数据
+            resetAllData: function() {
+                for (const key in this.gameData) {
+                    this.resetData(key);
+                }
+                console.log("已重置所有游戏数据");
+            },
+            
+            // 重置特定模块数据
+            resetData: function(module) {
+                const saveKey = this.SAVE_PREFIX + module;
+                StorageManager.remove(saveKey);
+                
+                // 重置内存中的数据
+                if (Array.isArray(this.gameData[module])) {
+                    this.gameData[module] = [];
+                } else {
+                    this.gameData[module] = {};
+                }
+            },
+            
+            // 邮件数据模块 - 嵌套在SaveManager内部
+            EmailDataModule: {
+                // 获取所有邮件
+                getAllEmails: function() {
+                    return SaveManager.gameData.emails;
+                },
+                
+                // 获取未读邮件数量
+                getUnreadCount: function() {
+                    return SaveManager.gameData.emails.filter(email => !email.read).length;
+                },
+                
+                // 按ID获取邮件
+                getEmailById: function(id) {
+                    return SaveManager.gameData.emails.find(email => email.id === id);
+                },
+                
+                // 获取未读邮件
+                getUnreadEmails: function() {
+                    return SaveManager.gameData.emails.filter(email => !email.read);
+                },
+                
+                // 添加新邮件
+                addEmail: function(emailData) {
+                    // 生成唯一ID
+                    const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                    
+                    // 创建邮件对象
+                    const email = {
+                        id: id,
+                        sender: emailData.sender,
+                        subject: emailData.subject,
+                        date: emailData.date || new Date().toISOString(),
+                        read: emailData.read || false,
+                        content: emailData.content
+                    };
+                    
+                    // 添加到邮件数组
+                    SaveManager.gameData.emails.push(email);
+                    
+                    // 保存更新
+                    SaveManager.saveData('emails', SaveManager.gameData.emails);
+                    
+                    return email;
+                },
+                
+                // 标记邮件为已读
+                markAsRead: function(id) {
+                    const email = this.getEmailById(id);
+                    if (email) {
+                        email.read = true;
+                        SaveManager.saveData('emails', SaveManager.gameData.emails);
+                        return true;
+                    }
+                    return false;
+                },
+                
+                // 删除邮件
+                deleteEmail: function(id) {
+                    const initialLength = SaveManager.gameData.emails.length;
+                    SaveManager.gameData.emails = SaveManager.gameData.emails.filter(email => email.id !== id);
+                    
+                    // 如果数组长度变化了，说明删除成功
+                    if (initialLength !== SaveManager.gameData.emails.length) {
+                        SaveManager.saveData('emails', SaveManager.gameData.emails);
+                        return true;
+                    }
+                    return false;
+                },
+                
+                // 初始化默认邮件
+                initDefaultEmails: function() {
+                    // 清空现有邮件
+                    SaveManager.gameData.emails = [];
+                    
+                    // 添加默认邮件
+                    this.addEmail({
+                        sender: "DIRECTOR",
+                        subject: "WELCOME TO THE AGENCY",
+                        date: "1982-04-28T09:15:00",
+                        read: false,
+                        content: "AGENT,\n\nWELCOME TO YOUR NEW ASSIGNMENT. THIS TERMINAL WILL BE YOUR PRIMARY INTERFACE FOR MISSION COMMUNICATIONS AND INTELLIGENCE GATHERING.\n\nYOUR FIRST BRIEFING WILL ARRIVE SHORTLY. STAY VIGILANT.\n\n- DIRECTOR"
+                    });
+                    
+                    this.addEmail({
+                        sender: "TECH_SUPPORT",
+                        subject: "TERMINAL USAGE INSTRUCTIONS",
+                        date: "1982-04-28T10:30:00",
+                        read: false,
+                        content: "TO: FIELD AGENT\nFROM: TECHNICAL SUPPORT\n\nYOUR TERMINAL SYSTEM HAS BEEN CONFIGURED WITH VARIOUS TOOLS:\n\n- FILE BROWSER: Access mission documents\n- DOSSIER SYSTEM: Review personnel files\n- DECRYPTION TOOL: Decode intercepted messages\n\nCONTACT SUPPORT IF YOU ENCOUNTER ANY ISSUES.\n\nREGARDS,\nTECHNICAL DIVISION"
+                    });
+                    
+                    this.addEmail({
+                        sender: "HANDLER",
+                        subject: "FIRST MISSION DETAILS",
+                        date: "1982-04-29T08:00:00",
+                        read: false,
+                        content: "AGENT,\n\nYOU ARE ASSIGNED TO MONITOR DIPLOMATIC COMMUNICATIONS FROM THE SOVIET EMBASSY. WE HAVE INTELLIGENCE SUGGESTING UNUSUAL ACTIVITY THAT MAY INDICATE A SECURITY BREACH.\n\nUSE THE DECRYPTION TOOL TO ANALYZE ANY INTERCEPTED MESSAGES. REPORT FINDINGS IMMEDIATELY.\n\nDESTROY THIS MESSAGE AFTER READING.\n\n- HANDLER"
+                    });
+                }
+            },
+            
+            // 此处可以添加其他数据模块，如FileDataModule, MissionDataModule等
+            
+            // 初始化所有模块默认数据
+            initAllDefaultData: function() {
+                this.EmailDataModule.initDefaultEmails();
+                // 其他模块的默认数据初始化...
             }
         };
         
