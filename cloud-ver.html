@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIA终端系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/css/styles.css">
+</head>
+<body>
+    <div class="crt-container">
+        <div class="power-button" id="power-btn"></div>
+        <div class="screen">
+            <!-- 左侧程序/命令行窗口 -->
+            <div class="program-window">
+                <!-- 终端命令行 -->
+                <div class="terminal flicker-effect" id="terminal">
+                    <!-- 输出历史区域 -->
+                    <div id="output" class="terminal-output"></div>
+                    
+                    <!-- 当前命令输入行 -->
+                    <div class="current-command-line">
+                        <span class="prompt">></span>
+                        <span id="command-text" style="display: inline-block;"></span>
+                        <span class="cursor"></span>
+                        <input type="text" id="user-input" autocomplete="off" style="position: absolute; opacity: 0; height: 1px;">
+                    </div>
+                </div>
+                
+                <!-- 文件浏览器应用 -->
+                <div class="app-window" id="fileExplorer">
+                    <div class="window-title">
+                        <span>FILE BROWSER</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <!-- 目录浏览视图 -->
+                        <div id="file-list-view">
+                            <div class="file-header">
+                                <span class="file-path-display" id="current-path">PATH: /</span>
+                            </div>
+                            <div id="file-list-container">
+                                <!-- 文件列表将动态加载 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 文件内容视图 (初始隐藏) -->
+                        <div id="file-detail-view" style="display: none;">
+                            <div class="file-detail-header">
+                                <div class="file-detail-nav">
+                                    <span class="file-back-btn">[←BACK]</span>
+                                </div>
+                                <div class="file-detail-info">
+                                    <div class="file-detail-name">File: <span id="file-name"></span></div>
+                                    <div class="file-detail-type">Type: <span id="file-type"></span></div>
+                                </div>
+                            </div>
+                            <div class="file-separator">FILE CONTENT</div>
+                            <div id="file-content" class="file-detail-content"></div>
+                            <div class="file-footer">
+                                //END OF FILE//
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 档案查询应用 -->
+                <div class="app-window" id="dossierSystem">
+                    <div class="window-title">
+                        <span>DOSSIER SYSTEM</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <div>
+                            SUBJECT SEARCH: <input type="text" style="background: #000; color: #e3af00; border: 1px solid #e3af00;">
+                            <button style="background: #000; color: #e3af00; border: 1px solid #e3af00; cursor: pointer;">SEARCH</button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            RESULTS:
+                            NO RESULTS FOUND.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 解密工具应用 -->
+                <div class="app-window" id="decryptTool">
+                    <div class="window-title">
+                        <span>DECRYPTION UTILITY</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <div>
+                            INPUT ENCRYPTED TEXT:
+                            <textarea style="width: 100%; height: 100px; background: #000; color: #e3af00; border: 1px solid #e3af00;"></textarea>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button style="background: #000; color: #e3af00; border: 1px solid #e3af00; cursor: pointer;">DECRYPT</button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            RESULT:
+                            AWAITING INPUT...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 邮件程序应用 -->
+                <div class="app-window" id="mail">
+                    <div class="window-title">
+                        <span>MAIL CLIENT</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <!-- 邮件列表视图 -->
+                        <div id="mail-list-view">
+                            <div class="mail-header">
+                                <span class="mail-col-id">#</span>
+                                <span class="mail-col-status">STATUS</span>
+                                <span class="mail-col-date">DATE</span>
+                                <span class="mail-col-sender">SENDER</span>
+                                <span class="mail-col-subject">SUBJECT</span>
+                            </div>
+                            <div id="mail-list-container">
+                                <!-- 邮件列表将动态加载 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 邮件详情视图 (初始隐藏) -->
+                        <div id="mail-detail-view" style="display: none;">
+                            <div class="mail-detail-header">
+                                <div class="mail-detail-nav">
+                                    <span class="mail-back-btn">[←BACK]</span>
+                                    <span class="mail-prev-btn">[↑PREV]</span>
+                                    <span class="mail-next-btn">[↓NEXT]</span>
+                                </div>
+                                <div class="mail-detail-info">
+                                    <div class="mail-detail-date">Date: <span id="mail-date"></span></div>
+                                    <div class="mail-detail-from">From: <span id="mail-sender"></span></div>
+                                    <div class="mail-detail-to">To: AGENT@CIA.GOV</div>
+                                    <div class="mail-detail-cc">Cc: ADMIN@CIA.GOV</div>
+                                    <div class="mail-detail-subject">Subject: <span id="mail-subject"></span></div>
+                                </div>
+                            </div>
+                            <div class="mail-separator">CONFIDENTIAL - INTERNAL USE ONLY</div>
+                            <div id="mail-content" class="mail-detail-content"></div>
+                            <div class="mail-footer">
+                                //END OF MESSAGE//
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 状态栏 -->
+                <div class="status-bar">
+                    <div>USER: AGENT</div>
+                    <div>STATUS: SECURE</div>
+                    <div id="clock">1982-04-29 12:00:00</div>
+                </div>
+            </div>
+            
+            <!-- 右侧菜单面板 -->
+            <div class="menu-panel">
+                <div class="user-profile">
+                    <div class="avatar-container">
+                        <div class="avatar-overlay"></div>
+                        <img id="user-avatar" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABKLAcXAAAAA1BMVEX///+nxBvIAAAAAXRSTlMAQObYZgAAABVJREFUeNpjYBgFo2AUjIJRMAqGIwAABRAAAUWDDkUAAAAASUVORK5CYII=" alt="User Avatar">
+                        <input type="file" id="avatar-upload" accept="image/png,image/jpeg" style="display:none">
+                    </div>
+                    <div id="user-name">No User</div>
+                </div>
+                <div class="menu-title">SYSTEM MENU</div>
+                <div class="menu-item" data-app="terminal">MAIN</div>
+                <div class="menu-item" data-app="fileExplorer">FILE BROWSER</div>
+                <div class="menu-item" data-app="dossierSystem">DOSSIER SYSTEM</div>
+                <div class="menu-item" data-app="decryptTool">DECRYPTION TOOL</div>
+                <div class="menu-item" data-app="mail">MAIL</div> 
+                <div class="menu-item" data-app="comms">COMMUNICATIONS</div>
+                <div class="menu-item" data-app="map">WORLD MAP</div>
+                <div class="menu-item" data-app="musicPlayer">MUSIC PLAYER</div> 
+                <div class="menu-title">SYSTEM</div>
+                <div class="menu-item" data-app="login">LOGIN</div>
+                <div class="menu-item" data-app="settings">SETTINGS</div>
+                <div class="menu-item" data-app="help">HELP</div>
+                <div class="menu-item" id="logoutBtn">LOGOUT</div>
+            </div>
+
+            <!-- 底部信息提示条 -->
+            <div class="info-bar">
+                <span id="info-text">请使用方向键选择选项</span>
+            </div>
+        </div>
+    </div>
+    <!-- 核心模块 -->
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/core/EventBus.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/core/StorageManager.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/core/Constants.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/core/Config.js"></script>
+    
+    <!-- 模型层 -->
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/models/UserModel.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/models/SystemModel.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/models/MissionModel.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/models/TerminalModel.js"></script>
+    
+    <!-- 视图层 -->
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/views/TerminalView.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/views/ApplicationView.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/views/UserInterfaceView.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/views/MailView.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/views/FileView.js"></script>
+    
+    <!-- 控制器层 -->
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/controllers/NavigationController.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/controllers/TerminalController.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/controllers/ApplicationController.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/controllers/MailController.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/controllers/FileController.js"></script>
+    
+    <!-- 管理器与杂项 -->
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/utils/SaveManager.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/utils/EffectsManager.js"></script>
+    
+    <!-- 应用入口 -->
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/app.js"></script>
+</body>
+</html>
