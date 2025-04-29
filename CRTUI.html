@@ -120,7 +120,7 @@
             right: 0;
             bottom: 0;
             padding: 15px;
-            padding-top: 35px;  /* 增加顶部padding以避免被状态栏遮挡 */
+            padding-top: 35px; /* 为顶部状态栏留出空间 */
             color: #e3af00;
             font-family: "Courier New", monospace;
             font-size: 16px;
@@ -128,30 +128,61 @@
             white-space: pre-wrap;
             overflow-y: auto;
             text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+            background-color: #000;
         }
-        
+
+        /* 输出历史区域 */
+        .terminal-output {
+            margin-bottom: 20px;
+        }
+
+        /* 当前命令行 */
+        .current-command-line {
+            display: flex;
+            align-items: center;
+            position: relative;
+            white-space: nowrap;
+        }
+   
         /* 命令提示符和输入区域 */
         .command-line {
             display: flex;
+            align-items: center;
             margin-top: 10px;
+            width: 100%;
+            position: relative;
         }
         
         .prompt {
             color: #e3af00;
             margin-right: 8px;
         }
+
+        /* 可见命令文本 */
+        #command-text {
+            color: #e3af00;
+        }
+
+        /* 输入框包装器 */
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-container {
+            position: relative;
+            flex-grow: 1;
+        }
         
         /* 输入框 */
         #user-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #e3af00;
-            font-family: "Courier New", monospace;
-            font-size: 16px;
-            caret-color: #e3af00;
-            outline: none;
-            text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            height: 1px;
+            width: 1px;
+            z-index: -1;
         }
         
         /* 闪烁的光标 */
@@ -160,15 +191,22 @@
             50% { opacity: 0; }
         }
         
+        /* 非聚焦状态的光标 */
         .cursor {
             display: inline-block;
             width: 10px;
             height: 18px;
-            background-color: #e3af00;
+            background-color: #8a6900;
+            box-shadow: none;
             margin-left: 2px;
             animation: blink 1s infinite;
         }
-        
+
+        .input-focus .cursor {
+            background-color: #e3af00;
+            box-shadow: 0 0 8px rgba(227, 175, 0, 0.8);
+        }
+                
         /* 应用窗口 */
         .app-window {
             display: none;
@@ -237,6 +275,12 @@
             background-color: rgba(0, 0, 0, 0.5);
             font-size: 14px;
             z-index: 5;      /* 确保它在其他元素之上 */
+        }
+
+        /* 终端头部样式 */
+        .terminal-header-line {
+            text-align: left;
+            padding-left: 30px; /* 给左侧留出一定空间 */
         }
         
         /* 开机动画效果 */
@@ -357,16 +401,15 @@
             <div class="program-window">
                 <!-- 终端命令行 -->
                 <div class="terminal flicker-effect" id="terminal">
-                    <div id="output">
-                        CENTRAL INTELLIGENCE AGENCY
-                        SECURE TERMINAL V3.2.1 [1982-04-29]
-                        TOP SECRET - AUTHORIZED PERSONNEL ONLY
-                        ENTER CREDENTIALS TO PROCEED.
-                    </div>
-                    <div class="command-line">
+                    <!-- 输出历史区域 -->
+                    <div id="output" class="terminal-output"></div>
+                    
+                    <!-- 当前命令输入行 -->
+                    <div class="current-command-line">
                         <span class="prompt">></span>
-                        <input type="text" id="user-input" autofocus>
+                        <span id="command-text" style="display: inline-block;"></span>
                         <span class="cursor"></span>
+                        <input type="text" id="user-input" autocomplete="off" style="position: absolute; opacity: 0; height: 1px;">
                     </div>
                 </div>
                 
@@ -617,11 +660,63 @@
             output: document.getElementById('output'),
             input: document.getElementById('user-input'),
             clock: document.getElementById('clock'),
+
+            // 主界面固定内容
+            terminalHeader: `>CENTRAL INTELLIGENCE AGENCY
+>SYSTEML V3.2.1 [1982-04-29]
+>COPYRIGHT (C) 1982
+>SECURE TERMINA - AUTHORIZED PERSONNEL ONLY
+>
+>WEATHER - NEW BOSTON CLOUDY 56F
+>MAIL -INBOX:0
+>MUSIC <<[0]>> L'envol - Oil Astral
+>
+`,
             
-            // 添加文本到终端
+            // 恢复这个方法，避免报错
             writeToTerminal: function(text) {
+                this.appendToOutput(text);
+            },
+            
+            // 正确显示用户输入
+            updateCommandText: function() {
+                // 确保元素存在
+                if (this.commandText) {
+                    this.commandText.textContent = this.input.value;
+                }
+            },
+
+            // 初始化终端组件
+            initTerminal: function() {
+                // 获取DOM元素（确保存在）
+                this.terminal = document.getElementById('terminal');
+                this.output = document.getElementById('output');
+                this.input = document.getElementById('user-input');
+                this.commandText = document.getElementById('command-text');
+                
+                // 仅在元素存在时设置事件
+                if (this.input && this.commandText) {
+                    // 设置输入事件
+                    this.input.addEventListener('input', () => {
+                        this.commandText.textContent = this.input.value;
+                    });
+                    
+                    // 初始焦点
+                    this.input.focus();
+                }
+                
+                // 确保点击终端任何地方都会聚焦到输入框
+                if (this.terminal && this.input) {
+                    this.terminal.addEventListener('click', () => {
+                        this.input.focus();
+                    });
+                }
+            },
+            
+            // 添加内容到输出历史
+            appendToOutput: function(text) {
                 if (text === "CLEAR_SCREEN") {
-                    this.output.innerHTML = "";
+                    this.output.innerHTML = this.terminalHeader;
                     return;
                 }
                 
@@ -631,13 +726,31 @@
                     return;
                 }
                 
-                this.output.innerHTML += '\n' + text;
+                this.output.innerHTML += text + "\n";
+                this.scrollToBottom();
+            },
+            
+            // 处理命令提交
+            processCommand: function(command) {
+                // 1. 添加命令到输出历史
+                this.appendToOutput("> " + command);
+                
+                // 2. 清空输入
+                this.input.value = "";
+                this.commandText.textContent = "";
+                
+                // 3. 处理命令并显示响应
+                const response = Model.processCommand(command);
+                this.appendToOutput(response);
+                
+                // 4. 滚动到底部
                 this.scrollToBottom();
             },
             
             // 清除输入
             clearInput: function() {
                 this.input.value = '';
+                this.commandText.textContent = '';
             },
             
             // 滚动到底部
@@ -658,9 +771,11 @@
                 this.terminal.classList.add('flicker-effect');
                 setTimeout(() => {
                     this.terminal.classList.remove('flicker-effect');
+                    this.initCustomCursor(); // 确保光标初始化
+                    this.input.focus(); // 确保输入框获得焦点
                 }, 2000);
             },
-            
+                        
             // 显示应用程序
             showApp: function(appId) {
                 // 隐藏所有应用程序
@@ -686,11 +801,92 @@
             },
 
             updateInfoBar: function(text) {
-                const infoText = document.getElementById('info-text');
-                if (infoText) {
-                    infoText.textContent = text;
-                }
-            }
+                    const infoText = document.getElementById('info-text');
+                    if (infoText) {
+                        infoText.textContent = text;
+                    }
+                },
+
+                // 输入光标
+                initCustomCursor: function() {
+                    const input = document.getElementById('user-input');
+                    const cursor = document.querySelector('.cursor');
+                    const cmdLine = document.querySelector('.command-line');
+                    
+                    // 更新光标位置的函数
+                    function updateCursorPosition() {
+                        const inputRect = input.getBoundingClientRect();
+                        const cmdLineRect = cmdLine.getBoundingClientRect();
+                        
+                        // 创建临时span来测量文本宽度
+                        const textMeasure = document.createElement('span');
+                        textMeasure.style.font = window.getComputedStyle(input).font;
+                        textMeasure.style.position = 'absolute';
+                        textMeasure.style.visibility = 'hidden';
+                        textMeasure.style.whiteSpace = 'pre';
+                        textMeasure.textContent = input.value.substring(0, input.selectionStart);
+                        document.body.appendChild(textMeasure);
+                        
+                        // 计算光标位置
+                        const textWidth = textMeasure.getBoundingClientRect().width;
+                        const promptWidth = document.querySelector('.prompt').getBoundingClientRect().width;
+                        cursor.style.left = (promptWidth + textWidth) + 'px';
+                        
+                        document.body.removeChild(textMeasure);
+                    }
+                    
+                    // 事件监听
+                    input.addEventListener('input', updateCursorPosition);
+                    input.addEventListener('click', updateCursorPosition);
+                    input.addEventListener('keydown', function() {
+                        setTimeout(updateCursorPosition, 0);
+                    });
+                    window.addEventListener('resize', updateCursorPosition);
+                    
+                    // 初始化光标位置
+                    setTimeout(updateCursorPosition, 10);
+                    
+                    // 强制聚焦
+                    input.focus();
+                },
+
+                appendToOutput: function(text) {
+                    if (text === "CLEAR_SCREEN") {
+                        this.output.innerHTML = this.terminalHeader;
+                        return;
+                    }
+                    
+                    if (text.startsWith("LAUNCH_APP:")) {
+                        const appName = text.split(":")[1];
+                        Controller.launchApp(appName);
+                        return;
+                    }
+                    
+                    // 添加文本到输出区域
+                    this.output.innerHTML += text + "\n";
+                    this.scrollToBottom();
+                },
+
+                initFocusIndicator: function() {
+                    const terminal = document.getElementById('terminal');
+                    const input = document.getElementById('user-input');
+                    
+                    if (terminal && input) {
+                        // 初始添加焦点类
+                        terminal.classList.add('input-focus');
+                        
+                        // 处理获得焦点
+                        input.addEventListener('focus', () => {
+                            terminal.classList.add('input-focus');
+                        });
+                        
+                        // 处理失去焦点
+                        input.addEventListener('blur', () => {
+                            terminal.classList.remove('input-focus');
+                        });
+                    }
+                },
+
         };
         
         // Controller - 处理用户输入和连接Model与View
@@ -700,6 +896,10 @@
                 View.input.addEventListener('keydown', this.handleInput.bind(this));
                 document.getElementById('power-btn').addEventListener('click', this.reboot.bind(this));
                 document.getElementById('logoutBtn').addEventListener('click', this.logout.bind(this));
+                
+                // 初始化View组件
+                View.initTerminal();
+                View.initFocusIndicator();
                 
                 // 添加菜单项点击事件
                 document.querySelectorAll('.menu-item').forEach(item => {
@@ -719,75 +919,23 @@
                 
                 // 自动聚焦到输入框
                 View.input.focus();
-
-                // 键盘事件监听
-                document.addEventListener('keydown', (e) => {
-                    // 如果当前焦点在输入框上，使用原有的命令历史导航
-                    if (document.activeElement === View.input) {
-                        if (e.key === 'ArrowUp') {
-                            if (Model.currentCommandIndex > 0) {
-                                Model.currentCommandIndex--;
-                                View.input.value = Model.commandHistory[Model.currentCommandIndex];
-                            }
-                            e.preventDefault();
-                        } else if (e.key === 'ArrowDown') {
-                            if (Model.currentCommandIndex < Model.commandHistory.length - 1) {
-                                Model.currentCommandIndex++;
-                                View.input.value = Model.commandHistory[Model.currentCommandIndex];
-                            } else {
-                                Model.currentCommandIndex = Model.commandHistory.length;
-                                View.input.value = '';
-                            }
-                            e.preventDefault();
-                        }
-                    } 
-                    // 如果焦点不在输入框上，使用菜单导航
-                    else {
-                        if (e.key === 'ArrowUp') {
-                            Model.selectionSystem.moveUp();
-                            e.preventDefault();
-                        } else if (e.key === 'ArrowDown') {
-                            Model.selectionSystem.moveDown();
-                            e.preventDefault();
-                        } else if (e.key === 'Enter') {
-                            Model.selectionSystem.activateSelection();
-                            e.preventDefault();
-                        }
-                    }
-                });
-
-                // 确保焦点切换正常工作
-                View.blurInput = function() {
-                    this.input.blur();
-                };
-
-                // 当点击菜单区域时切换焦点
-                document.querySelector('.menu-panel').addEventListener('click', function() {
-                    View.blurInput();
-                });
-
-                // 当点击终端区域时聚焦到输入框
-                View.terminal.addEventListener('click', function(e) {
-                    if (e.target === View.terminal) {
-                        View.input.focus();
-                    }
-                });
                 
                 // 初始化选择系统
-                Model.selectionSystem.init();
+                if (Model.selectionSystem && typeof Model.selectionSystem.init === 'function') {
+                    Model.selectionSystem.init();
+                }
             },
             
             handleInput: function(e) {
                 // 回车键处理命令
                 if (e.key === 'Enter') {
                     const command = View.input.value.trim();
-                    View.writeToTerminal(`> ${command}`);
-                    const response = Model.processCommand(command);
-                    View.writeToTerminal(response);
-                    View.clearInput();
+                    if (command) {
+                        View.processCommand(command);
+                    }
                     e.preventDefault();
                 }
-                // 上下箭头导航命令历史
+                            // 上下箭头导航命令历史
                 else if (e.key === 'ArrowUp') {
                     if (Model.currentCommandIndex > 0) {
                         Model.currentCommandIndex--;
@@ -832,6 +980,18 @@
                     View.showApp('terminal');
                     return;
                 }
+
+                if (appId === 'mail') {
+                    View.writeToTerminal("LAUNCHING MAIL CLIENT...\nINBOX: EMPTY\nNO NEW MESSAGES.");
+                    View.showApp('terminal');
+                    return;
+                }
+
+                if (appId === 'musicPlayer') {
+                    View.writeToTerminal("LAUNCHING MUSIC PLAYER...\nPLAYING: L'envol - Oil Astral\nVOLUME: 80%\nPRESS SPACE TO PAUSE/PLAY");
+                    View.showApp('terminal');
+                    return;
+                }
                 
                 // 显示请求的应用程序
                 View.showApp(appId);
@@ -846,18 +1006,14 @@
             
             // 重启系统
             reboot: function() {
-                Model.state.authenticated = true; // 确保重启后仍然是登录状态
+                Model.state.authenticated = true;
                 View.showApp('terminal');
                 View.output.innerHTML = 'SYSTEM REBOOTING...\n';
                 
                 setTimeout(() => {
                     View.bootSequence();
-                    View.output.innerHTML = 
-                        'INITIALIZING...\n' +
-                        'CENTRAL INTELLIGENCE AGENCY\n' +
-                        'SECURE TERMINAL V3.2.1 [1982-04-29]\n' +
-                        'TOP SECRET - AUTHORIZED PERSONNEL ONLY\n' +
-                        'AGENT AUTHENTICATED. SYSTEM READY.'; 
+                    View.output.innerHTML = View.terminalHeader;
+                    View.initTerminal(); // 确保终端重新初始化
                 }, 1000);
             },
             
@@ -868,32 +1024,27 @@
                     Model.currentDate.setSeconds(Model.currentDate.getSeconds() + 1);
                     View.updateClock();
                 }, 1000);
-            }
+            },
+            
         };
         
         // 初始化应用
         document.addEventListener('DOMContentLoaded', function() {
-            Controller.init();
-            View.bootSequence();
-
-            View.output.innerHTML = 
-                'CENTRAL INTELLIGENCE AGENCY\n' +
-                'SECURE TERMINAL V3.2.1 [1982-04-29]\n' +
-                'TOP SECRET - AUTHORIZED PERSONNEL ONLY\n' +
-                'AGENT AUTHENTICATED. SYSTEM READY.'
-            
-            // 确保点击页面任何地方但不是菜单或应用程序时都会聚焦到输入框
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.menu-panel') && 
-                    !e.target.closest('.app-window') && 
-                    !e.target.closest('input') && 
-                    !e.target.closest('button') && 
-                    !e.target.closest('textarea')) {
-                    if (Model.state.currentScreen === 'terminal') {
-                        View.input.focus();
+            // 确保DOM完全加载后执行初始化
+            setTimeout(() => {
+                try {
+                    Controller.init();
+                    View.bootSequence();
+                    
+                    // 设置初始内容
+                    if (View.output) {
+                        View.output.innerHTML = View.terminalHeader || 
+                            '> CENTRAL INTELLIGENCE AGENCY\n> TERMINAL READY';
                     }
+                } catch (e) {
+                    console.error("初始化错误:", e);
                 }
-            });
+            }, 100);
         });
     </script>
 </body>
