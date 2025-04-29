@@ -3002,27 +3002,34 @@
                 
                 // 按路径获取文件
                 getFilesByPath: function(path) {
-                    const files = this.getAllFiles();
+                    if (!SaveManager.gameData.files || !SaveManager.gameData.files.list) {
+                        return [];
+                    }
+                    
+                    const files = SaveManager.gameData.files.list;
+                    
+                    // 过滤出当前路径下的直接子项
                     return files.filter(file => {
-                        // 路径匹配逻辑，支持目录层级
+                        // 根目录处理
                         if (path === "" || path === "/") {
-                            // 根目录：返回没有/的顶级文件
+                            // 返回顶级项（不包含/的项）
                             return !file.title.includes('/');
-                        } else {
-                            // 排除当前目录自身
-                            if (file.title === path) {
-                                return false;
-                            }
-                            
-                            // 是否为当前路径的直接子项
-                            if (file.title.startsWith(path + '/')) {
-                                const remainingPath = file.title.substring(path.length + 1);
-                                // 确保没有更深层级的路径（不包含更多的/）
-                                return !remainingPath.includes('/');
-                            }
-                            
+                        }
+                        
+                        // 非根目录处理：
+                        // 1. 不包含当前目录自身
+                        if (file.title === path) {
                             return false;
                         }
+                        
+                        // 2. 检查是否为直接子项
+                        if (file.title.startsWith(path + '/')) {
+                            const remainingPath = file.title.substring(path.length + 1);
+                            // 不包含更多/的是直接子项
+                            return !remainingPath.includes('/');
+                        }
+                        
+                        return false;
                     });
                 },
                 
@@ -3039,18 +3046,62 @@
                     // 创建文件对象
                     const file = {
                         id: id,
-                        type: fileData.type,   // 例如: "TXT", "DIR", "IMG", "EXE" 等
-                        title: fileData.title, // 包含路径的文件名，如 "MISSIONS/SECRET.TXT"
+                        type: fileData.type,
+                        title: fileData.title,
                         content: fileData.content
                     };
                     
                     // 添加到文件数组
                     SaveManager.gameData.files.list.push(file);
                     
+                    // 如果是文件并且包含路径，确保所有父目录存在
+                    if (file.type !== "DIR" && file.title.includes('/')) {
+                        this.ensureDirectories(file.title);
+                    }
+                    
                     // 保存更新
                     SaveManager.saveData('files', SaveManager.gameData.files);
                     
                     return file;
+                },
+
+                // 确保所有路径中的目录存在
+                ensureDirectories: function(filePath) {
+                    const pathParts = filePath.split('/');
+                    
+                    // 移除最后一个部分(文件名)
+                    pathParts.pop();
+                    
+                    if (pathParts.length === 0) return; // 没有目录部分
+                    
+                    // 逐级创建目录
+                    let currentPath = "";
+                    pathParts.forEach((part, index) => {
+                        if (index > 0) currentPath += "/";
+                        currentPath += part;
+                        
+                        // 检查此目录是否已存在
+                        const exists = SaveManager.gameData.files.list.some(file => 
+                            file.type === "DIR" && file.title === currentPath
+                        );
+                        
+                        // 如果不存在，创建目录
+                        if (!exists) {
+                            console.log("自动创建目录:", currentPath);
+                            
+                            // 创建目录对象
+                            const dirId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                            const directory = {
+                                id: dirId,
+                                type: "DIR",
+                                title: currentPath,
+                                content: `DIRECTORY: AUTO-GENERATED FOR ${currentPath}`
+                            };
+                            
+                            // 添加到文件数组
+                            SaveManager.gameData.files.list.push(directory);
+                        }
+                    });
                 },
                 
                 // 更新文件
@@ -3087,7 +3138,7 @@
                     // 清空现有文件
                     SaveManager.gameData.files = { list: [] };
                     
-                    // 添加默认文件
+                    // 添加顶级文件
                     this.addFile({
                         type: "TXT",
                         title: "README.TXT",
@@ -3100,37 +3151,11 @@
                         content: "MISSION: EAGLE EYE\n\nOBJECTIVE: MONITOR DIPLOMATIC COMMUNICATIONS FROM SOVIET EMBASSY\n\nSTATUS: ACTIVE\n\nDETAILS:\n1. INTERCEPT ALL OUTGOING COMMUNICATIONS\n2. DECODE ENCRYPTED MESSAGES USING DECRYPTION TOOL\n3. REPORT ANY SUSPICIOUS ACTIVITY\n\nCONTACT HANDLER IF SITUATION ESCALATES."
                     });
                     
-                    // 添加目录
-                    this.addFile({
-                        type: "DIR",
-                        title: "MISSIONS",
-                        content: "DIRECTORY: CONTAINS MISSION BRIEFINGS AND REPORTS"
-                    });
-                    
-                    this.addFile({
-                        type: "DIR",
-                        title: "INTEL",
-                        content: "DIRECTORY: CONTAINS INTELLIGENCE REPORTS AND ANALYSIS"
-                    });
-                    
-                    this.addFile({
-                        type: "DIR",
-                        title: "PERSONNEL",
-                        content: "DIRECTORY: CONTAINS AGENT PROFILES AND CONTACT INFORMATION"
-                    });
-                    
-                    // 添加MISSIONS目录下的文件
+                    // 添加带路径的文件 - 将自动创建目录结构
                     this.addFile({
                         type: "TXT",
                         title: "MISSIONS/EAGLE_EYE.TXT",
                         content: "MISSION BRIEF: EAGLE EYE\n\nCODE NAME: EAGLE EYE\nCLASSIFICATION: TOP SECRET\nLOCATION: WASHINGTON D.C.\nDURATION: ONGOING\n\nOBJECTIVE:\nEstablish surveillance on Soviet diplomatic channels. Monitor for encoded transmissions that may indicate espionage activities.\n\nRESOURCES:\n- Terminal access to SIGINT database\n- Decryption tools\n- Field agents on standby\n\nPROCEDURE:\n1. Monitor all communications channels daily\n2. Decrypt any suspicious messages\n3. Cross-reference with known Soviet codes\n4. Report findings through secure channels\n\nAUTHORIZATION:\nDirector of Operations\n28-APR-1982"
-                    });
-                    
-                    // 添加MISSIONS/ARCHIVE子目录
-                    this.addFile({
-                        type: "DIR",
-                        title: "MISSIONS/ARCHIVE",
-                        content: "DIRECTORY: CONTAINS COMPLETED MISSION REPORTS"
                     });
                     
                     this.addFile({
@@ -3139,29 +3164,28 @@
                         content: "MISSION BRIEF: BLUE JAY\n\nCODE NAME: BLUE JAY\nCLASSIFICATION: SECRET\nLOCATION: WEST BERLIN\nDURATION: COMPLETED (1981)\n\nOBJECTIVE:\nInfiltrate suspected KGB front organization and recover intelligence on East German operations.\n\nOUTCOME:\nSuccess. Recovered documents revealing three deep cover agents in NATO.\n\nCASUALTIES: None\n\nNOTES:\nFollow-up surveillance recommended on identified associates."
                     });
                     
-                    // 添加INTEL目录下的文件
                     this.addFile({
                         type: "TXT",
                         title: "INTEL/SOVIET_EMBASSY_STAFF.TXT",
                         content: "SOVIET EMBASSY PERSONNEL - WASHINGTON D.C.\n\nOFFICIAL DIPLOMATIC STAFF:\n\n1. VIKTOR PETROV - AMBASSADOR\n   ARRIVED: 1980-03-15\n   NOTES: CAREER DIPLOMAT, NO KNOWN KGB AFFILIATIONS\n\n2. MIKHAIL BARANOV - CULTURAL ATTACHÉ\n   ARRIVED: 1981-06-22\n   NOTES: SUSPECTED GRU INTELLIGENCE OFFICER\n\n3. NATALIA SOKOLOVA - PRESS SECRETARY\n   ARRIVED: 1979-11-04\n   NOTES: CLEAN BACKGROUND\n\n4. DMITRI VOLKOV - FIRST SECRETARY\n   ARRIVED: 1981-01-10\n   NOTES: UNUSUAL COMMUNICATION PATTERNS DETECTED\n         POSSIBLE HANDLER FOR ASSETS\n         PRIORITY SURVEILLANCE TARGET\n\n5. IVAN KUZNETSOV - ECONOMIC ADVISOR\n   ARRIVED: 1982-02-18\n   NOTES: RECENT ARRIVAL, BACKGROUND CHECK PENDING"
                     });
                     
-                    // 添加PERSONNEL目录下的文件
                     this.addFile({
                         type: "TXT",
                         title: "PERSONNEL/CONTACTS.TXT",
                         content: "EMERGENCY CONTACTS\n\nFIELD OPERATIONS:\nHANDLER: JOHNSON\nCODE: OSCAR-DELTA-7\nEMERGENCY LINE: 555-3900\n\nTECHNICAL SUPPORT:\nLEAD: CLARKE\nCODE: TANGO-SIERRA-2\nDIRECT LINE: 555-4017\n\nEXTRACTION TEAM:\nLEAD: MARTINEZ\nCODE: ECHO-XRAY-9\nSTANDBY: 24HR\n\nSAFE HOUSES:\n1. GEORGETOWN - 1429 WISCONSIN AVE\n   PASSPHRASE: \"THE WEATHER IN CHICAGO IS UNPREDICTABLE\"\n\n2. ALEXANDRIA - 227 KING STREET\n   PASSPHRASE: \"I'M LOOKING FOR MY BROTHER'S RECORD COLLECTION\"\n\nMEDICAL:\nDR. WILSON - 555-6332\nCODE: MEDICAL SITUATION ALPHA"
                     });
-
-                    // 在最后增加这些调试和确认保存的代码
-                    console.log("已创建默认文件:", SaveManager.gameData.files.list.length, "个");
                     
-                    // 确保保存到localStorage
+                    // 添加深层嵌套目录中的文件
+                    this.addFile({
+                        type: "TXT",
+                        title: "INTEL/KGB/ASSETS/KNOWN_OPERATIVES.TXT",
+                        content: "KGB KNOWN OPERATIVES - NORTH AMERICA\n\n1. CODENAME: FALCON\n   REAL NAME: UNKNOWN\n   POSITION: SUSPECTED STATE DEPARTMENT INFILTRATION\n   STATUS: ACTIVE\n\n2. CODENAME: MERCURY\n   REAL NAME: POSSIBLY ALEXEI KUZNETSOV\n   POSITION: SCIENTIFIC INTELLIGENCE\n   STATUS: UNDER SURVEILLANCE\n\n3. CODENAME: VEGA\n   REAL NAME: UNKNOWN (FEMALE)\n   POSITION: COMMUNICATIONS SPECIALIST\n   STATUS: ACTIVE, HIGH PRIORITY TARGET\n\nLAST UPDATED: MARCH 12, 1982\nCLEARANCE LEVEL: TOP SECRET/UMBRA"
+                    });
+                    
+                    // 在最后增加确认保存的代码
+                    console.log("已创建默认文件和自动生成的目录结构");
                     SaveManager.saveData('files', SaveManager.gameData.files);
-                    
-                    // 验证保存
-                    const savedData = localStorage.getItem(SaveManager.SAVE_PREFIX + 'files');
-                    console.log("验证保存数据:", savedData ? "成功" : "失败");
                 }
             },
 
