@@ -1342,9 +1342,31 @@
             currentView: 'list',
             // 当前显示的邮件列表
             displayedEmails: [],
+            isActive: false,
+
+            ensureViewState: function() {
+                if (this.currentView === 'list') {
+                    document.getElementById('mail-list-view').style.display = 'block';
+                    document.getElementById('mail-detail-view').style.display = 'none';
+                } else {
+                    document.getElementById('mail-list-view').style.display = 'none';
+                    document.getElementById('mail-detail-view').style.display = 'block';
+                }
+            },
             
             init: function() {
                 this.initEventListeners();
+                
+                // 增加视图状态订阅
+                EventBus.subscribe('app:launch', (appId) => {
+                    if (appId === 'mail') {
+                        // 确保每次启动时都是列表视图
+                        setTimeout(() => {
+                            this.currentView = 'list';
+                            this.ensureViewState();
+                        }, 50);
+                    }
+                });
             },
             
             initEventListeners: function() {
@@ -1363,27 +1385,74 @@
                     this.navigateNextMail();
                 });
                 
+                // 订阅应用退出请求
+                EventBus.subscribe('app:requestExit', () => {
+                    if (SystemModel.currentScreen === 'mail') {
+                        if (this.currentView === 'detail') {
+                            // 如果在详情视图，先返回列表视图
+                            this.showListView();
+                        } else {
+                            // 如果已经在列表视图，则退出应用
+                            EventBus.publish('app:close');
+                        }
+                    }
+                });
+                
+                // 订阅导航模式变化
+                EventBus.subscribe('navigation:modeChanged', (mode) => {
+                    this.isActive = (mode === 'app' && SystemModel.currentScreen === 'mail');
+                    console.log("邮件应用活动状态:", this.isActive); // 调试日志
+                });
+
+                // 订阅应用激活事件
+                EventBus.subscribe('app:activated', (appId) => {
+                    if (appId === 'mail') {
+                        // 强制设置为列表视图
+                        this.currentView = 'list';
+                        this.isActive = true;
+                        this.ensureViewState();
+                        this.updateSelection();
+                    }
+                });
+
+                // 订阅应用退出请求
+                EventBus.subscribe('app:requestExit', () => {
+                    if (SystemModel.currentScreen === 'mail') {
+                        if (this.currentView === 'detail') {
+                            // 如果在详情视图，先返回列表视图
+                            this.showListView();
+                        } else {
+                            // 如果已经在列表视图，则退出应用
+                            EventBus.publish('app:close');
+                        }
+                    }
+                });
+                
                 // 全局键盘事件监听
                 document.addEventListener('keydown', (e) => {
-                    // 只在邮件应用激活时处理
-                    if (SystemModel.currentScreen !== 'mail') return;
+                    // 仅当邮件应用活动时处理键盘事件
+                    if (!this.isActive || SystemModel.currentScreen !== 'mail') return;
                     
-                    // ESC 键返回邮件列表
-                    if (e.key === 'Escape' && this.currentView === 'detail') {
-                        this.showListView();
-                        e.preventDefault();
+                    // 确保视图状态与实际显示一致
+                    this.ensureViewState();
+                    
+                    // 如果在应用焦点模式下但没有响应键盘，尝试激活
+                    if (NavigationController.focusMode === 'app' && !this.isActive) {
+                        this.isActive = true;
                     }
                     
                     // 左箭头键返回列表
                     if (e.key === 'ArrowLeft' && this.currentView === 'detail') {
                         this.showListView();
                         e.preventDefault();
+                        return;
                     }
                     
                     // 右箭头键查看详情
                     if (e.key === 'ArrowRight' && this.currentView === 'list') {
                         this.viewSelectedEmail();
                         e.preventDefault();
+                        return;
                     }
                     
                     // 上箭头键选择上一封邮件
@@ -1394,6 +1463,7 @@
                             this.navigatePrevMail();
                         }
                         e.preventDefault();
+                        return;
                     }
                     
                     // 下箭头键选择下一封邮件
@@ -1404,12 +1474,14 @@
                             this.navigateNextMail();
                         }
                         e.preventDefault();
+                        return;
                     }
                     
                     // Enter键查看选中邮件
                     if (e.key === 'Enter' && this.currentView === 'list') {
                         this.viewSelectedEmail();
                         e.preventDefault();
+                        return;
                     }
                 });
             },
@@ -1457,6 +1529,17 @@
                     });
                     
                     container.appendChild(row);
+
+                    // 在渲染结束后，确保视图状态正确
+                    this.ensureViewState();
+                    
+                    // 确保选中项高亮
+                    this.updateSelection();
+                    
+                    // 如果是列表视图，更新相应信息栏
+                    if (this.currentView === 'list') {
+                        UserInterfaceView.updateInfoBar("MAIL LIST: USE ARROWS to NAVIGATE, ENTER to VIEW, ESC to EXIT");
+                    }
                 });
             },
             
@@ -1485,6 +1568,8 @@
                 
                 // 重新加载邮件列表（以反映读取状态变化）
                 this.renderMailList();
+
+                UserInterfaceView.updateInfoBar("MAIL LIST: USE ARROWS to NAVIGATE, ENTER to VIEW, ESC to EXIT");
             },
             
             // 查看选中的邮件
@@ -1493,7 +1578,21 @@
                 
                 const email = this.displayedEmails[this.selectedIndex];
                 if (email) {
-                    this.renderMailDetail(email);
+                    // 标记为已读
+                    SaveManager.EmailDataModule.markAsRead(email.id);
+                    
+                    // 更新UI元素
+                    document.getElementById('mail-date').textContent = this.formatDetailDate(email.date);
+                    document.getElementById('mail-sender').textContent = `${email.sender}@CIA.GOV`;
+                    document.getElementById('mail-subject').textContent = email.subject;
+                    document.getElementById('mail-content').textContent = email.content;
+                    
+                    // 切换到详情视图
+                    this.currentView = 'detail';
+                    this.ensureViewState();
+                    
+                    // 更新信息栏
+                    UserInterfaceView.updateInfoBar("MAIL DETAIL: LEFT to RETURN, UP/DOWN for PREV/NEXT");
                 }
             },
             
@@ -1568,6 +1667,7 @@
             currentFocus: 'terminal',
             menuItems: [],
             menuIndex: 0,
+            focusMode: 'system', // 'system'(系统菜单/终端) 或 'app'(应用内部)
             
             init: function() {
                 this.menuItems = Array.from(document.querySelectorAll('.menu-item'));
@@ -1578,19 +1678,72 @@
             initEventListeners: function() {
                 document.addEventListener('keydown', this.handleKeyNavigation.bind(this));
                 
-                // 点击终端区域时，切换到终端模式
+                // 终端点击事件
                 document.getElementById('terminal').addEventListener('click', (e) => {
                     e.stopPropagation(); 
                     this.switchFocus('terminal');
+                    this.setFocusMode('system');
                 });
                 
-                // 点击菜单区域时，切换到菜单模式
+                // 菜单面板点击事件
                 document.querySelector('.menu-panel').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    this.switchFocus('menu');
+                    // 只在点击到菜单面板空白处时切换焦点
+                    if (e.target.classList.contains('menu-panel') || 
+                        e.target.classList.contains('menu-title')) {
+                        this.switchFocus('menu');
+                        this.setFocusMode('system');
+                    }
+                });
+                
+                // 为每个菜单项添加点击事件
+                this.menuItems.forEach((item, index) => {
+                    item.addEventListener('click', (e) => {
+                        // 更新选中的菜单索引
+                        this.menuIndex = index;
+                        this.updateHighlight();
+                        
+                        // 如果点击的是应用程序项，设置为应用模式
+                        const appId = item.getAttribute('data-app');
+                        if (appId && appId !== 'terminal') {
+                            // 延迟设置应用模式，确保在应用启动后执行
+                            setTimeout(() => {
+                                this.setFocusMode('app');
+                            }, 50);
+                        }
+                    });
                 });
             },
             
+            // 设置焦点模式
+            setFocusMode: function(mode) {
+                if (this.focusMode === mode) return; // 避免重复设置
+                
+                this.focusMode = mode;
+                
+                // 处理UI反馈
+                if (mode === 'app') {
+                    // 隐藏系统菜单的选中效果
+                    this.menuItems.forEach(item => item.classList.remove('selected'));
+                    UserInterfaceView.updateInfoBar("APP MODE: USE ESC TO RETURN");
+                    
+                    // 发布应用激活事件
+                    EventBus.publish('app:activated', SystemModel.currentScreen);
+                } else {
+                    // 恢复系统菜单的选中效果
+                    this.updateHighlight();
+                    if (this.currentFocus === 'menu') {
+                        const selectedText = this.getSelectedItemText();
+                        UserInterfaceView.updateInfoBar(`SELECT: ${selectedText}`);
+                    } else {
+                        UserInterfaceView.updateInfoBar("MODE: COMMAND INPUT");
+                    }
+                }
+                
+                EventBus.publish('navigation:modeChanged', mode);
+            },
+
+            // 切换焦点区域
             switchFocus: function(target) {
                 this.currentFocus = target;
                 
@@ -1609,8 +1762,32 @@
                 EventBus.publish('navigation:focusChanged', target);
             },
             
+            // 处理键盘导航
             handleKeyNavigation: function(e) {
-                // 方向键导航
+                // 如果在应用模式下，不要处理菜单导航键
+                if (this.focusMode === 'app') {
+                    // 只处理ESC键
+                    if (e.key === 'Escape') {
+                        // 从应用模式退出到系统菜单
+                        this.setFocusMode('system');
+                        this.switchFocus('menu');
+                        
+                        // 触发应用退出事件
+                        EventBus.publish('app:requestExit');
+                        e.preventDefault();
+                    }
+                    return; // 在应用模式下不处理其他键
+                }
+                
+                // 系统模式下的ESC键处理
+                if (e.key === 'Escape' && this.currentFocus === 'menu') {
+                    // 从系统菜单退出到终端
+                    this.switchFocus('terminal');
+                    e.preventDefault();
+                    return;
+                }
+                
+                // 方向键导航 - 只在系统模式下处理
                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                     if (e.key === 'ArrowUp') {
                         this.navigateUp();
@@ -1671,6 +1848,16 @@
             activateSelection: function() {
                 if (this.menuItems.length > 0) {
                     const selectedItem = this.menuItems[this.menuIndex];
+                    const appId = selectedItem.getAttribute('data-app');
+                    
+                    // 如果选中的是应用程序，预设为应用模式
+                    if (appId && appId !== 'terminal') {
+                        // 记录要激活的应用ID，便于后续处理
+                        this.pendingAppActivation = appId;
+                        // 实际模式转换将在应用启动后进行
+                    }
+                    
+                    // 触发点击
                     selectedItem.click();
                 }
             },
@@ -1815,7 +2002,22 @@
                 }
 
                 if (appId === 'mail') {
-                    MailController.openMailApp();
+                    // 在打开邮件应用前先重置状态
+                    if (MailView) {
+                        // 强制重置为列表视图
+                        MailView.currentView = 'list';
+                        
+                        // 确保DOM状态正确
+                        document.getElementById('mail-list-view').style.display = 'block';
+                        document.getElementById('mail-detail-view').style.display = 'none';
+                    }
+                    
+                    // 确保状态重置后再打开应用
+                    setTimeout(() => {
+                        MailController.openMailApp();
+                        NavigationController.setFocusMode('app');
+                    }, 0);
+                    
                     return;
                 }
 
@@ -1838,12 +2040,20 @@
                 // 显示请求的应用程序
                 ApplicationView.showApp(appId);
                 SystemModel.changeScreen(appId);
+
+                // 如果不是终端，设置为应用模式
+                if (appId !== Constants.APPS.TERMINAL) {
+                    setTimeout(() => {
+                        NavigationController.setFocusMode('app');
+                    }, 50);
+                }
                 
                 // 确保焦点正确
                 NavigationController.switchFocus('terminal');
             },
             
             closeApp: function() {
+                NavigationController.setFocusMode('system');
                 this.showTerminal();
             },
             
@@ -1898,7 +2108,14 @@
                 
                 // 重置邮件视图状态
                 MailView.selectedIndex = 0;
+                
+                // 强制设置为列表视图
                 MailView.currentView = 'list';
+                MailView.isActive = true;
+                
+                // 显示邮件列表视图，隐藏详情视图
+                document.getElementById('mail-list-view').style.display = 'block';
+                document.getElementById('mail-detail-view').style.display = 'none';
                 
                 // 显示邮件列表
                 MailView.renderMailList();
@@ -1907,11 +2124,20 @@
                 ApplicationView.showApp('mail');
                 SystemModel.changeScreen('mail');
                 
-                // 确保焦点正确
-                NavigationController.switchFocus('terminal');
+                // 设置为应用焦点模式
+                NavigationController.setFocusMode('app');
                 
-                // 更新底部信息栏
-                UserInterfaceView.updateInfoBar("MAIL: USE ARROWS to NAVIGATE, ENTER to VIEW, ESC to RETURN");
+                // 确保焦点正确激活
+                setTimeout(() => {
+                    // 再次确认视图状态
+                    MailView.isActive = true;
+                    
+                    // 更新选中状态
+                    MailView.updateSelection();
+                    
+                    // 更新底部信息栏
+                    UserInterfaceView.updateInfoBar("MAIL: USE ARROWS to NAVIGATE, ENTER to VIEW, ESC to RETURN");
+                }, 100);
             },
             
             updateUnreadBadge: function(count) {
