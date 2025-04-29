@@ -216,8 +216,19 @@
     
     <!-- 管理器与杂项 -->
     <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/utils/SaveManager.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/utils/dataModule/FileDataModule.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/utils/dataModule/EmailDataModule.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/utils/EffectsManager.js"></script>
-    
+
+    <!-- 初始化模块依赖 -->
+    <script>
+        // 将模块注入到SaveManager中
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置模块引用
+            SaveManager.EmailDataModule = EmailDataModule;
+            SaveManager.FileDataModule = FileDataModule;
+        });
+    </script>
     <!-- 应用入口 -->
     <script src="https://cdn.jsdelivr.net/gh/MaybeNotMaybe/RetroUI-for-ST@main/js/app.js"></script>
 </body>

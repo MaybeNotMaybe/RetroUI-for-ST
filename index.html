@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CIA终端系统</title>
     <link rel="stylesheet" href="./css/styles.css">
-    <script src="./js/loader.js"></script>
 </head>
 <body>
     <div class="crt-container">
@@ -217,7 +216,19 @@
     
     <!-- 管理器与杂项 -->
     <script src="js/utils/SaveManager.js"></script>
+    <script src="js/utils/dataModule/FileDataModule.js"></script>
+    <script src="js/utils/dataModule/EmailDataModule.js"></script>
     <script src="js/utils/EffectsManager.js"></script>
+
+    <!-- 初始化模块依赖 -->
+    <script>
+        // 将模块注入到SaveManager中
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置模块引用
+            SaveManager.EmailDataModule = EmailDataModule;
+            SaveManager.FileDataModule = FileDataModule;
+        });
+    </script>
     
     <!-- 应用入口 -->
     <script src="js/app.js"></script>

@@ -2,11 +2,11 @@
 const App = {
     init: function() {
         // 初始化各个模块
+        SaveManager.init();
         UserModel.init();
         SystemModel.init();
         MissionModel.init();
-        TerminalModel.init();
-        SaveManager.init();
+        TerminalModel.init();    
         
         TerminalView.init();
         ApplicationView.init();
