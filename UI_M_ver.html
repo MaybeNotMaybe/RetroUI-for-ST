@@ -804,16 +804,21 @@
                 LOGIN: 'login'
             },
             
-            TERMINAL_HEADER: `>CENTRAL INTELLIGENCE AGENCY
+            getTerminalHeader: function() {
+    // 获取未读邮件数量
+    const unreadCount = SaveManager.EmailDataModule.getUnreadCount();
+    
+    return `>CENTRAL INTELLIGENCE AGENCY
 >SYSTEML V3.2.1 [1981-10-29]
 >COPYRIGHT (C) 1977
 >SECURE TERMINA - AUTHORIZED PERSONNEL ONLY
 >
 >WEATHER - NEW BOSTON CLOUDY 56F
->MAIL -INBOX:0
+>MAIL - INBOX: ${unreadCount} UNREAD
 >MUSIC <<[0]>> L'envol - Oil Astral
 >
-        `
+        `;
+}
         };
 
         // Config - 应用配置
@@ -1096,7 +1101,7 @@
             },
             
             clearScreen: function() {
-                this.output.innerHTML = Constants.TERMINAL_HEADER;
+                this.output.innerHTML = Constants.getTerminalHeader();
             },
             
             appendOutput: function(text) {
@@ -2150,6 +2155,10 @@
                         mailMenuItem.textContent = "MAIL";
                     }
                 }
+
+                if (SystemModel.currentScreen === Constants.APPS.TERMINAL) {
+                    TerminalView.clearScreen();
+                }
             },
             
             // 检查新邮件并更新徽章
@@ -2368,6 +2377,11 @@
                     // 保存更新
                     SaveManager.saveData('emails', SaveManager.gameData.emails);
                     
+                    if (!email.read) {
+                        const unreadCount = this.getUnreadCount();
+                        EventBus.publish('mail:unreadChanged', unreadCount);
+                    }
+                    
                     return email;
                 },
                 
@@ -2377,6 +2391,11 @@
                     if (email) {
                         email.read = true;
                         SaveManager.saveData('emails', SaveManager.gameData.emails);
+                        
+                        // 发布未读邮件变化事件
+                        const unreadCount = this.getUnreadCount();
+                        EventBus.publish('mail:unreadChanged', unreadCount);
+                        
                         return true;
                     }
                     return false;
