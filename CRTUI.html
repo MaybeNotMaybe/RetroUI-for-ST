@@ -191,15 +191,14 @@
             50% { opacity: 0; }
         }
         
-        /* 非聚焦状态的光标 */
+        /* 光标 */
         .cursor {
             display: inline-block;
             width: 10px;
             height: 18px;
-            background-color: #8a6900;
-            box-shadow: none;
-            margin-left: 2px;
+            background-color: #e3af00;
             animation: blink 1s infinite;
+            margin-left: 2px;
         }
 
         .input-focus .cursor {
@@ -530,14 +529,11 @@
             
             // 方向键选择系统
             selectionSystem: {
-                // 当前活跃区域: 'menu' 或 'app'
-                activeZone: 'menu',
                 // 当前选中的索引
                 menuIndex: 0,
-                appIndex: 0,
+                
                 // 可选择的元素
                 menuItems: [],
-                appItems: [],
                 
                 // 初始化可选择的元素
                 init: function() {
@@ -545,22 +541,31 @@
                     this.updateHighlight();
                 },
                 
-                // 在菜单中移动
-                moveUp: function() {
-                    if (this.activeZone === 'menu') {
-                        this.menuIndex = (this.menuIndex - 1 + this.menuItems.length) % this.menuItems.length;
-                    } else {
-                        // 应用内移动逻辑
+                // 确保有选中项
+                ensureSelection: function() {
+                    if (this.menuItems.length > 0 && this.menuIndex < 0) {
+                        this.menuIndex = 0;
                     }
                     this.updateHighlight();
                 },
                 
-                moveDown: function() {
-                    if (this.activeZone === 'menu') {
-                        this.menuIndex = (this.menuIndex + 1) % this.menuItems.length;
-                    } else {
-                        // 应用内移动逻辑
+                // 获取当前选中项文本
+                getSelectedItemText: function() {
+                    if (this.menuItems.length > 0 && this.menuIndex >= 0 && this.menuIndex < this.menuItems.length) {
+                        return this.menuItems[this.menuIndex].textContent;
                     }
+                    return "NONE";
+                },
+                
+                // 向上移动选择
+                moveUp: function() {
+                    this.menuIndex = (this.menuIndex - 1 + this.menuItems.length) % this.menuItems.length;
+                    this.updateHighlight();
+                },
+                
+                // 向下移动选择
+                moveDown: function() {
+                    this.menuIndex = (this.menuIndex + 1) % this.menuItems.length;
                     this.updateHighlight();
                 },
                 
@@ -570,7 +575,7 @@
                     this.menuItems.forEach(item => item.classList.remove('selected'));
                     
                     // 设置新的高亮
-                    if (this.activeZone === 'menu' && this.menuItems.length > 0) {
+                    if (this.menuItems.length > 0) {
                         this.menuItems[this.menuIndex].classList.add('selected');
                         
                         // 更新底部信息栏
@@ -581,12 +586,13 @@
                 
                 // 激活当前选择
                 activateSelection: function() {
-                    if (this.activeZone === 'menu') {
+                    if (this.menuItems.length > 0) {
                         const selectedItem = this.menuItems[this.menuIndex];
                         selectedItem.click();
                     }
                 }
             },
+
             // 命令处理
             processCommand: function(command) {
                 if (!command) return '';
@@ -750,7 +756,9 @@
             // 清除输入
             clearInput: function() {
                 this.input.value = '';
-                this.commandText.textContent = '';
+                if (this.commandText) {
+                    this.commandText.textContent = '';
+                }
             },
             
             // 滚动到底部
@@ -801,91 +809,91 @@
             },
 
             updateInfoBar: function(text) {
-                    const infoText = document.getElementById('info-text');
-                    if (infoText) {
-                        infoText.textContent = text;
-                    }
-                },
+                const infoText = document.getElementById('info-text');
+                if (infoText) {
+                    infoText.textContent = text;
+                }
+            },
 
-                // 输入光标
-                initCustomCursor: function() {
-                    const input = document.getElementById('user-input');
-                    const cursor = document.querySelector('.cursor');
-                    const cmdLine = document.querySelector('.command-line');
+            // 输入光标
+            initCustomCursor: function() {
+                const input = document.getElementById('user-input');
+                const cursor = document.querySelector('.cursor');
+                const cmdLine = document.querySelector('.command-line');
+                
+                // 更新光标位置的函数
+                function updateCursorPosition() {
+                    const inputRect = input.getBoundingClientRect();
+                    const cmdLineRect = cmdLine.getBoundingClientRect();
                     
-                    // 更新光标位置的函数
-                    function updateCursorPosition() {
-                        const inputRect = input.getBoundingClientRect();
-                        const cmdLineRect = cmdLine.getBoundingClientRect();
-                        
-                        // 创建临时span来测量文本宽度
-                        const textMeasure = document.createElement('span');
-                        textMeasure.style.font = window.getComputedStyle(input).font;
-                        textMeasure.style.position = 'absolute';
-                        textMeasure.style.visibility = 'hidden';
-                        textMeasure.style.whiteSpace = 'pre';
-                        textMeasure.textContent = input.value.substring(0, input.selectionStart);
-                        document.body.appendChild(textMeasure);
-                        
-                        // 计算光标位置
-                        const textWidth = textMeasure.getBoundingClientRect().width;
-                        const promptWidth = document.querySelector('.prompt').getBoundingClientRect().width;
-                        cursor.style.left = (promptWidth + textWidth) + 'px';
-                        
-                        document.body.removeChild(textMeasure);
-                    }
+                    // 创建临时span来测量文本宽度
+                    const textMeasure = document.createElement('span');
+                    textMeasure.style.font = window.getComputedStyle(input).font;
+                    textMeasure.style.position = 'absolute';
+                    textMeasure.style.visibility = 'hidden';
+                    textMeasure.style.whiteSpace = 'pre';
+                    textMeasure.textContent = input.value.substring(0, input.selectionStart);
+                    document.body.appendChild(textMeasure);
                     
-                    // 事件监听
-                    input.addEventListener('input', updateCursorPosition);
-                    input.addEventListener('click', updateCursorPosition);
-                    input.addEventListener('keydown', function() {
-                        setTimeout(updateCursorPosition, 0);
-                    });
-                    window.addEventListener('resize', updateCursorPosition);
+                    // 计算光标位置
+                    const textWidth = textMeasure.getBoundingClientRect().width;
+                    const promptWidth = document.querySelector('.prompt').getBoundingClientRect().width;
+                    cursor.style.left = (promptWidth + textWidth) + 'px';
                     
-                    // 初始化光标位置
-                    setTimeout(updateCursorPosition, 10);
-                    
-                    // 强制聚焦
-                    input.focus();
-                },
+                    document.body.removeChild(textMeasure);
+                }
+                
+                // 事件监听
+                input.addEventListener('input', updateCursorPosition);
+                input.addEventListener('click', updateCursorPosition);
+                input.addEventListener('keydown', function() {
+                    setTimeout(updateCursorPosition, 0);
+                });
+                window.addEventListener('resize', updateCursorPosition);
+                
+                // 初始化光标位置
+                setTimeout(updateCursorPosition, 10);
+                
+                // 强制聚焦
+                input.focus();
+            },
 
-                appendToOutput: function(text) {
-                    if (text === "CLEAR_SCREEN") {
-                        this.output.innerHTML = this.terminalHeader;
-                        return;
-                    }
-                    
-                    if (text.startsWith("LAUNCH_APP:")) {
-                        const appName = text.split(":")[1];
-                        Controller.launchApp(appName);
-                        return;
-                    }
-                    
-                    // 添加文本到输出区域
-                    this.output.innerHTML += text + "\n";
-                    this.scrollToBottom();
-                },
+            appendToOutput: function(text) {
+                if (text === "CLEAR_SCREEN") {
+                    this.output.innerHTML = this.terminalHeader;
+                    return;
+                }
+                
+                if (text.startsWith("LAUNCH_APP:")) {
+                    const appName = text.split(":")[1];
+                    Controller.launchApp(appName);
+                    return;
+                }
+                
+                // 添加文本到输出区域
+                this.output.innerHTML += text + "\n";
+                this.scrollToBottom();
+            },
 
-                initFocusIndicator: function() {
-                    const terminal = document.getElementById('terminal');
-                    const input = document.getElementById('user-input');
+            initFocusIndicator: function() {
+                const terminal = document.getElementById('terminal');
+                const input = document.getElementById('user-input');
+                
+                if (terminal && input) {
+                    // 初始添加焦点类
+                    terminal.classList.add('input-focus');
                     
-                    if (terminal && input) {
-                        // 初始添加焦点类
+                    // 处理获得焦点
+                    input.addEventListener('focus', () => {
                         terminal.classList.add('input-focus');
-                        
-                        // 处理获得焦点
-                        input.addEventListener('focus', () => {
-                            terminal.classList.add('input-focus');
-                        });
-                        
-                        // 处理失去焦点
-                        input.addEventListener('blur', () => {
-                            terminal.classList.remove('input-focus');
-                        });
-                    }
-                },
+                    });
+                    
+                    // 处理失去焦点
+                    input.addEventListener('blur', () => {
+                        terminal.classList.remove('input-focus');
+                    });
+                }
+            },
 
         };
         
@@ -896,6 +904,21 @@
                 View.input.addEventListener('keydown', this.handleInput.bind(this));
                 document.getElementById('power-btn').addEventListener('click', this.reboot.bind(this));
                 document.getElementById('logoutBtn').addEventListener('click', this.logout.bind(this));
+
+                if (View.input) {
+                    View.input.removeEventListener('keydown', this.handleInput);
+                }
+                
+                // 添加全局键盘监听
+                document.addEventListener('keydown', (e) => {
+                    FocusManager.handleNavigation(e);
+                });
+                
+                // 初始化选择系统
+                Model.selectionSystem.init();
+                
+                // 初始化焦点在终端
+                FocusManager.focusTerminal();
                 
                 // 初始化View组件
                 View.initTerminal();
@@ -968,6 +991,9 @@
                     View.showApp('terminal');
                     return;
                 }
+
+                // 应用启动时自动将焦点切换到终端
+                FocusManager.focusTerminal();
                 
                 // 对其他菜单项进行权限检查
                 if (!Model.state.authenticated && appId !== 'terminal') {
@@ -1027,6 +1053,90 @@
             },
             
         };
+
+        const FocusManager = {
+            // 当前焦点区域: 'terminal' 或 'menu'
+            currentFocus: 'terminal',
+            
+            // 切换焦点到终端
+            focusTerminal: function() {
+                this.currentFocus = 'terminal';
+                // 显示光标
+                document.querySelector('.cursor').style.display = 'inline-block';
+                // 聚焦输入框
+                View.input.focus();
+                // 更新底部信息栏
+                View.updateInfoBar("MODE: COMMAND INPUT");
+            },
+            
+            // 切换焦点到菜单
+            focusMenu: function() {
+                this.currentFocus = 'menu';
+                // 隐藏光标
+                document.querySelector('.cursor').style.display = 'none';
+                // 取消输入框焦点
+                View.input.blur();
+                // 确保菜单有选中项
+                Model.selectionSystem.ensureSelection();
+                // 更新底部信息栏
+                const selectedText = Model.selectionSystem.getSelectedItemText();
+                View.updateInfoBar(`SELECT: ${selectedText}`);
+            },
+            
+            // 处理全局键盘导航
+            handleNavigation: function(e) {
+                // 方向键导航 - 始终用于菜单导航
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    if (e.key === 'ArrowUp') {
+                        Model.selectionSystem.moveUp();
+                    } else {
+                        Model.selectionSystem.moveDown();
+                    }
+                    
+                    // 如果在终端模式，自动切换到菜单模式
+                    if (this.currentFocus === 'terminal') {
+                        this.focusMenu();
+                    }
+                    
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Enter键行为区分
+                if (e.key === 'Enter') {
+                    if (this.currentFocus === 'terminal') {
+                        // 终端模式：执行命令
+                        const command = View.input.value.trim();
+                        if (command) {
+                            View.processCommand(command);
+                        }
+                    } else {
+                        // 菜单模式：选择菜单项
+                        Model.selectionSystem.activateSelection();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Tab键切换焦点区域
+                if (e.key === 'Tab') {
+                    if (this.currentFocus === 'terminal') {
+                        this.focusMenu();
+                    } else {
+                        this.focusTerminal();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                
+                // 如果按下其他键且当前不在终端模式，自动切换到终端模式
+                if (this.currentFocus !== 'terminal' && 
+                    e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    this.focusTerminal();
+                    // 不阻止默认行为，让按键输入到终端
+                }
+            }
+        };
         
         // 初始化应用
         document.addEventListener('DOMContentLoaded', function() {
@@ -1045,6 +1155,20 @@
                     console.error("初始化错误:", e);
                 }
             }, 100);
+
+             // 点击终端区域时，切换到终端模式
+            document.getElementById('terminal').addEventListener('click', function(e) {
+                // 阻止冒泡，确保不会触发外层点击事件
+                e.stopPropagation(); 
+                FocusManager.focusTerminal();
+            });
+            
+            // 点击菜单区域时，切换到菜单模式
+            document.querySelector('.menu-panel').addEventListener('click', function(e) {
+                // 阻止冒泡
+                e.stopPropagation();
+                FocusManager.focusMenu();
+            });
         });
     </script>
 </body>
