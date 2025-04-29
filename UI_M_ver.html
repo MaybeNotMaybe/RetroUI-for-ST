@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIA终端系统</title>
+    <style>
+        /* 全局样式 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: #111;
+        }
+        
+        /* CRT显示器外壳 */
+        .crt-container {
+            position: relative;
+            width: 95%;
+            height: 90%;
+            max-width: 1200px;
+            margin: 2% auto;
+            background-color: #222;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* 屏幕效果 */
+        .screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+            display: flex;
+            /* 添加双线边框 */
+            border: 2px solid #e3af00;
+            outline: 1px solid #e3af00;
+            outline-offset: -4px;
+        }
+        
+        /* CRT效果：扫描线 */
+        .screen::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        /* CRT效果：轻微辉光 */
+        .screen::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 30px rgba(200, 175, 20, 0.1);
+            pointer-events: none;
+            z-index: 9;
+        }
+        
+        /* 左侧程序窗口 */
+        .program-window {
+            flex: 1;
+            border-right: 1px solid #e3af00;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 右侧菜单 */
+        .menu-panel {
+            width: 180px;
+            padding: 10px;
+            overflow-y: auto;
+            user-select: none;
+        }
+        
+        /* 菜单标题 */
+        .menu-title {
+            color: #e3af00;
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e3af00;
+        }
+        
+        /* 用户信息区域样式 */
+        .user-profile {
+            text-align: center;
+            padding: 15px 5px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e3af00;
+        }
+
+        /* 头像容器 */
+        .avatar-container {
+            position: relative;
+            width: 90%;
+            height: auto;
+            aspect-ratio: 3/4;
+            margin: 0 auto 10px;
+            cursor: pointer;
+            border: 2px solid #e3af00;
+            overflow: hidden;
+        }
+
+        /* 默认头像 */
+        #user-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background-color: #222;
+        }
+
+        /* CRT扫描线效果叠加层 */
+        .avatar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* 用户名样式 */
+        #user-name {
+            color: #e3af00;
+            font-size: 14px;
+            text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+            margin-top: 5px;
+        }
+
+        /* 马赛克效果 - 登出状态 */
+        .pixelated {
+            image-rendering: pixelated;
+            filter: brightness(0.7) contrast(1.2) blur(1px);
+        }
+
+        /* 头像上传悬停效果 */
+        .avatar-container:hover::before {
+            content: "UPLOAD";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: #e3af00;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        /* 菜单项 */
+        .menu-item {
+            color: #e3af00;
+            padding: 6px 10px;
+            margin: 4px 0;
+            cursor: pointer;
+            border: 1px solid transparent;
+            text-shadow: 0 0 5px rgba(227, 175, 0, 0.3);
+        }
+        
+        .menu-item:hover {
+            border: 1px solid #e3af00;
+            background-color: rgba(227, 175, 0, 0.1);
+            text-shadow: 0 0 8px rgba(227, 175, 0, 0.6);
+        }
+        
+        /* 终端内容区域 */
+        .terminal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 15px;
+            padding-top: 35px; /* 为顶部状态栏留出空间 */
+            color: #e3af00;
+            font-family: "Courier New", monospace;
+            font-size: 16px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+            background-color: #000;
+        }
+
+        /* 输出历史区域 */
+        .terminal-output {
+            margin-bottom: 20px;
+        }
+
+        /* 当前命令行 */
+        .current-command-line {
+            display: flex;
+            align-items: center;
+            position: relative;
+            white-space: nowrap;
+            overflow: visible;
+        }
+   
+        /* 命令提示符和输入区域 */
+        .command-line {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            width: 100%;
+            position: relative;
+        }
+        
+        .prompt {
+            color: #e3af00;
+            margin-right: 8px;
+        }
+
+        /* 可见命令文本 */
+        #command-text {
+            color: #e3af00;
+            white-space: pre;
+        }
+
+        /* 输入框包装器 */
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .input-container {
+            position: relative;
+            flex-grow: 1;
+        }
+        
+        /* 输入框 */
+        #user-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            height: 1px;
+            width: 1px;
+            z-index: -1;
+        }
+        
+        /* 闪烁的光标 */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        /* 光标 */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background-color: #e3af00;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        .input-focus .cursor {
+            background-color: #e3af00;
+            box-shadow: 0 0 8px rgba(227, 175, 0, 0.8);
+        }
+                
+        /* 应用窗口 */
+        .app-window {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 5px;
+            padding-top: 35px;  /* 增加顶部padding */
+            color: #e3af00;
+            overflow-y: auto;
+        }
+
+        /* 选中项的样式 */
+        .menu-item.selected {
+            background-color: rgba(227, 175, 0, 0.4);
+            border: 1px solid #e3af00;
+            color: #e3af00;  /* 从#000改回为#e3af00 */
+            text-shadow: 0 0 8px rgba(227, 175, 0, 0.8);  /* 增强文字发光效果 */
+        }
+        
+        /* 窗口标题栏 */
+        .window-title {
+            border-bottom: 1px solid #e3af00;
+            padding: 5px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .close-btn {
+            cursor: pointer;
+        }
+        
+        /* 窗口内容 */
+        .window-content {
+            padding: 5px;
+        }
+        
+        /* 应用程序特定样式 */
+        .file-item {
+            padding: 3px;
+            cursor: pointer;
+            margin: 2px 0;
+        }
+        
+        .file-item:hover {
+            background-color: rgba(227, 175, 0, 0.2);
+        }
+        
+        /* 状态栏 */
+        .status-bar {
+            position: absolute;
+            top: 0;          /* 从bottom: 0改为top: 0 */
+            left: 0;
+            right: 0;
+            height: 25px;
+            border-bottom: 1px solid #e3af00;  /* 从border-top改为border-bottom */
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            align-items: center;
+            color: #e3af00;
+            background-color: rgba(0, 0, 0, 0.5);
+            font-size: 14px;
+            z-index: 5;      /* 确保它在其他元素之上 */
+        }
+
+        /* 终端头部样式 */
+        .terminal-header-line {
+            text-align: left;
+            padding-left: 30px; /* 给左侧留出一定空间 */
+        }
+        
+        /* 开机动画效果 */
+        @keyframes flicker {
+            0% { opacity: 0.8; }
+            5% { opacity: 0.5; }
+            10% { opacity: 0.8; }
+            15% { opacity: 0.9; }
+            20% { opacity: 0.7; }
+            25% { opacity: 0.9; }
+            30% { opacity: 0.8; }
+            35% { opacity: 1.0; }
+            40% { opacity: 0.7; }
+            45% { opacity: 0.9; }
+            50% { opacity: 1.0; }
+            55% { opacity: 0.8; }
+            60% { opacity: 0.9; }
+            100% { opacity: 1.0; }
+        }
+        
+        /* 开机后应用闪烁效果 */
+        .flicker-effect {
+            animation: flicker 2s ease-in-out;
+        }
+        
+        /* 加载动画 */
+        @keyframes loading {
+            0% { content: ".  "; }
+            33% { content: ".. "; }
+            66% { content: "..."; }
+            100% { content: ".  "; }
+        }
+        
+        .loading::after {
+            content: ".  ";
+            animation: loading 1.5s infinite steps(1);
+        }
+        
+        /* 电源按钮 */
+        .power-button {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            width: 15px;
+            height: 15px;
+            background-color: #444;
+            border: 2px solid #333;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .power-button:active {
+            background-color: #e3af00;
+            box-shadow: 0 0 10px rgba(227, 175, 0, 0.7);
+        }
+
+        /* 底部信息栏样式 */
+        .info-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 24px;
+            background-color: #e3af00;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            z-index: 100;
+        }
+
+        /* 隐藏所有滚动条 */
+        /* Chrome, Safari, Edge 等基于webkit的浏览器 */
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            background: transparent;
+            display: none;
+        }
+
+        /* 适用于Firefox */
+        * {
+            scrollbar-width: none;
+        }
+
+        /* 确保全局没有滚动条 */
+        html, body {
+            overflow: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        /* 确保含滚动内容的容器不显示滚动条但保留滚动功能 */
+        .terminal, .app-window, .menu-panel, .window-content {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            overflow-y: auto;
+        }
+
+        .terminal::-webkit-scrollbar, 
+        .app-window::-webkit-scrollbar, 
+        .menu-panel::-webkit-scrollbar,
+        .window-content::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            background: transparent;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="crt-container">
+        <div class="power-button" id="power-btn"></div>
+        <div class="screen">
+            <!-- 左侧程序/命令行窗口 -->
+            <div class="program-window">
+                <!-- 终端命令行 -->
+                <div class="terminal flicker-effect" id="terminal">
+                    <!-- 输出历史区域 -->
+                    <div id="output" class="terminal-output"></div>
+                    
+                    <!-- 当前命令输入行 -->
+                    <div class="current-command-line">
+                        <span class="prompt">></span>
+                        <span id="command-text" style="display: inline-block;"></span>
+                        <span class="cursor"></span>
+                        <input type="text" id="user-input" autocomplete="off" style="position: absolute; opacity: 0; height: 1px;">
+                    </div>
+                </div>
+                
+                <!-- 文件浏览器应用 -->
+                <div class="app-window" id="fileExplorer">
+                    <div class="window-title">
+                        <span>FILE BROWSER</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <div class="file-item">[DIR] MISSIONS</div>
+                        <div class="file-item">[DIR] INTEL</div>
+                        <div class="file-item">[DIR] PERSONNEL</div>
+                        <div class="file-item">[TXT] README.TXT</div>
+                        <div class="file-item">[TXT] CURRENT_MISSION.TXT</div>
+                    </div>
+                </div>
+                
+                <!-- 档案查询应用 -->
+                <div class="app-window" id="dossierSystem">
+                    <div class="window-title">
+                        <span>DOSSIER SYSTEM</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <div>
+                            SUBJECT SEARCH: <input type="text" style="background: #000; color: #e3af00; border: 1px solid #e3af00;">
+                            <button style="background: #000; color: #e3af00; border: 1px solid #e3af00; cursor: pointer;">SEARCH</button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            RESULTS:
+                            NO RESULTS FOUND.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 解密工具应用 -->
+                <div class="app-window" id="decryptTool">
+                    <div class="window-title">
+                        <span>DECRYPTION UTILITY</span>
+                        <span class="close-btn">[X]</span>
+                    </div>
+                    <div class="window-content">
+                        <div>
+                            INPUT ENCRYPTED TEXT:
+                            <textarea style="width: 100%; height: 100px; background: #000; color: #e3af00; border: 1px solid #e3af00;"></textarea>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button style="background: #000; color: #e3af00; border: 1px solid #e3af00; cursor: pointer;">DECRYPT</button>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            RESULT:
+                            AWAITING INPUT...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 状态栏 -->
+                <div class="status-bar">
+                    <div>USER: AGENT</div>
+                    <div>STATUS: SECURE</div>
+                    <div id="clock">1982-04-29 12:00:00</div>
+                </div>
+            </div>
+            
+            <!-- 右侧菜单面板 -->
+            <div class="menu-panel">
+                <div class="user-profile">
+                    <div class="avatar-container">
+                        <div class="avatar-overlay"></div>
+                        <img id="user-avatar" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABKLAcXAAAAA1BMVEX///+nxBvIAAAAAXRSTlMAQObYZgAAABVJREFUeNpjYBgFo2AUjIJRMAqGIwAABRAAAUWDDkUAAAAASUVORK5CYII=" alt="User Avatar">
+                        <input type="file" id="avatar-upload" accept="image/png,image/jpeg" style="display:none">
+                    </div>
+                    <div id="user-name">No User</div>
+                </div>
+                <div class="menu-title">SYSTEM MENU</div>
+                <div class="menu-item" data-app="terminal">MAIN</div>
+                <div class="menu-item" data-app="fileExplorer">FILE BROWSER</div>
+                <div class="menu-item" data-app="dossierSystem">DOSSIER SYSTEM</div>
+                <div class="menu-item" data-app="decryptTool">DECRYPTION TOOL</div>
+                <div class="menu-item" data-app="mail">MAIL</div> 
+                <div class="menu-item" data-app="comms">COMMUNICATIONS</div>
+                <div class="menu-item" data-app="map">WORLD MAP</div>
+                <div class="menu-item" data-app="musicPlayer">MUSIC PLAYER</div> 
+                <div class="menu-title">SYSTEM</div>
+                <div class="menu-item" data-app="login">LOGIN</div>
+                <div class="menu-item" data-app="settings">SETTINGS</div>
+                <div class="menu-item" data-app="help">HELP</div>
+                <div class="menu-item" id="logoutBtn">LOGOUT</div>
+            </div>
+
+            <!-- 底部信息提示条 -->
+            <div class="info-bar">
+                <span id="info-text">请使用方向键选择选项</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // EventBus - 事件发布/订阅系统，用于模块间通信
+    const EventBus = {
+        events: {},
+        
+        subscribe: function(event, callback) {
+            if (!this.events[event]) {
+                this.events[event] = [];
+            }
+            this.events[event].push(callback);
+        },
+        
+        publish: function(event, data) {
+            if (!this.events[event]) return;
+            this.events[event].forEach(callback => callback(data));
+        },
+        
+        unsubscribe: function(event, callback) {
+            if (!this.events[event]) return;
+            this.events[event] = this.events[event].filter(cb => cb !== callback);
+        }
+    };
+
+    // StorageManager - 管理本地存储
+    const StorageManager = {
+        save: function(key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        },
+        
+        load: function(key) {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        },
+        
+        remove: function(key) {
+            localStorage.removeItem(key);
+        }
+    };
+
+    // Constants - 应用常量
+    const Constants = {
+        STORAGE_KEYS: {
+            USER_PROFILE: 'cia_user_profile',
+            USER_AVATAR: 'cia_user_avatar',
+            USER_NAME: 'cia_user_name',
+            GAME_PROGRESS: 'cia_game_progress'
+        },
+        
+        APPS: {
+            TERMINAL: 'terminal',
+            FILE_EXPLORER: 'fileExplorer',
+            DOSSIER: 'dossierSystem',
+            DECRYPT: 'decryptTool',
+            MAIL: 'mail',
+            COMMS: 'comms',
+            MAP: 'map',
+            MUSIC: 'musicPlayer',
+            SETTINGS: 'settings'
+        },
+        
+        COMMANDS: {
+            HELP: 'help',
+            STATUS: 'status',
+            CLEAR: 'clear',
+            EXIT: 'exit',
+            LOGOUT: 'logout',
+            LIST: 'list',
+            RUN: 'run',
+            LOGIN: 'login'
+        },
+        
+        TERMINAL_HEADER: `>CENTRAL INTELLIGENCE AGENCY
+>SYSTEML V3.2.1 [1981-10-29]
+>COPYRIGHT (C) 1977
+>SECURE TERMINA - AUTHORIZED PERSONNEL ONLY
+>
+>WEATHER - NEW BOSTON CLOUDY 56F
+>MAIL -INBOX:0
+>MUSIC <<[0]>> L'envol - Oil Astral
+>
+    `
+    };
+
+    // Config - 应用配置
+    const Config = {
+        DEBUG_MODE: false,
+        DEFAULT_DATE: new Date(1982, 3, 29, 12, 0, 0),
+        CLOCK_UPDATE_INTERVAL: 1000, // ms
+        DEFAULT_USER: {
+            name: "AGENT",
+            rank: "FIELD OPERATIVE",
+            clearance: "LEVEL 3"
+        }
+    };
+
+    // UserModel - 管理用户数据和认证
+    const UserModel = {
+        profile: {
+            name: Config.DEFAULT_USER.name,
+            rank: Config.DEFAULT_USER.rank,
+            clearance: Config.DEFAULT_USER.clearance,
+            avatar: null
+        },
+        
+        authenticated: true,
+        
+        init: function() {
+            this.loadProfile();
+        },
+        
+        login: function(username) {
+            if (username) {
+                this.profile.name = username.toUpperCase();
+            }
+            this.authenticated = true;
+            this.saveProfile();
+            EventBus.publish('user:login', this.profile);
+            return `ACCESS GRANTED\nWELCOME ${this.profile.name}\n\nTYPE 'HELP' FOR AVAILABLE COMMANDS.`;
+        },
+        
+        logout: function() {
+            this.authenticated = false;
+            EventBus.publish('user:logout');
+            return "LOGOUT SUCCESSFUL\nSYSTEM LOCKED";
+        },
+        
+        saveProfile: function() {
+            if (this.profile.avatar) {
+                StorageManager.save(Constants.STORAGE_KEYS.USER_AVATAR, this.profile.avatar);
+            }
+            StorageManager.save(Constants.STORAGE_KEYS.USER_NAME, this.profile.name);
+        },
+        
+        loadProfile: function() {
+            const savedAvatar = StorageManager.load(Constants.STORAGE_KEYS.USER_AVATAR);
+            const savedName = StorageManager.load(Constants.STORAGE_KEYS.USER_NAME);
+            
+            if (savedAvatar) {
+                this.profile.avatar = savedAvatar;
+            }
+            
+            if (savedName) {
+                this.profile.name = savedName;
+            }
+        },
+        
+        updateAvatar: function(avatarData) {
+            this.profile.avatar = avatarData;
+            this.saveProfile();
+            EventBus.publish('user:avatarChanged', avatarData);
+        },
+        
+        isAuthenticated: function() {
+            return this.authenticated;
+        }
+    };
+
+    // SystemModel - 管理系统状态
+    const SystemModel = {
+        currentScreen: Constants.APPS.TERMINAL,
+        currentDate: new Date(Config.DEFAULT_DATE),
+        
+        init: function() {
+            this.startClock();
+        },
+        
+        changeScreen: function(screenId) {
+            this.currentScreen = screenId;
+            EventBus.publish('system:screenChanged', screenId);
+        },
+        
+        startClock: function() {
+            setInterval(() => {
+                this.updateTime();
+            }, Config.CLOCK_UPDATE_INTERVAL);
+        },
+        
+        updateTime: function() {
+            this.currentDate.setSeconds(this.currentDate.getSeconds() + 1);
+            EventBus.publish('system:timeUpdated', this.currentDate);
+        },
+        
+        getSystemInfo: function() {
+            return {
+                screen: this.currentScreen,
+                date: this.currentDate
+            };
+        },
+        
+        reboot: function() {
+            EventBus.publish('system:reboot');
+            setTimeout(() => {
+                this.changeScreen(Constants.APPS.TERMINAL);
+                EventBus.publish('system:bootComplete');
+            }, 1000);
+        }
+    };
+
+    // MissionModel - 管理任务和游戏进度
+    const MissionModel = {
+        missions: [],
+        currentMission: null,
+        progress: 0,
+        
+        init: function() {
+            // 初始化任务数据
+        },
+        
+        loadMission: function(id) {
+            // 加载特定任务
+        },
+        
+        updateProgress: function(missionId, step) {
+            // 更新任务进度
+            this.progress = Math.min(100, this.progress + step);
+            EventBus.publish('mission:progressUpdated', this.progress);
+        },
+        
+        getMissionStatus: function() {
+            return `MISSION STATUS: IN PROGRESS (${this.progress}%)\n` +
+                    `AGENT: ${UserModel.profile.name}\n` +
+                    `RANK: ${UserModel.profile.rank}\n` +
+                    `CLEARANCE: ${UserModel.profile.clearance}`;
+        }
+    };
+
+    // TerminalModel - 管理终端状态和命令处理
+    const TerminalModel = {
+        commandHistory: [],
+        currentCommandIndex: -1,
+        
+        init: function() {
+            // 初始化终端模型
+        },
+        
+        addToHistory: function(command) {
+            this.commandHistory.push(command);
+            this.currentCommandIndex = this.commandHistory.length;
+        },
+        
+        getPreviousCommand: function() {
+            if (this.currentCommandIndex > 0) {
+                this.currentCommandIndex--;
+                return this.commandHistory[this.currentCommandIndex];
+            }
+            return null;
+        },
+        
+        getNextCommand: function() {
+            if (this.currentCommandIndex < this.commandHistory.length - 1) {
+                this.currentCommandIndex++;
+                return this.commandHistory[this.currentCommandIndex];
+            } else {
+                this.currentCommandIndex = this.commandHistory.length;
+                return '';
+            }
+        },
+        
+        processCommand: function(command) {
+            if (!command) return '';
+            
+            this.addToHistory(command);
+            
+            // 登录逻辑
+            if (!UserModel.isAuthenticated()) {
+                if (command.toLowerCase().startsWith(Constants.COMMANDS.LOGIN)) {
+                    let username = Config.DEFAULT_USER.name; // 默认名称
+                    // 检查是否有提供用户名 (例如: login john)
+                    const parts = command.split(' ');
+                    if (parts.length > 1) {
+                        username = parts.slice(1).join(' ');
+                    }
+                    return UserModel.login(username);
+                } else {
+                    return "ERROR: UNAUTHORIZED ACCESS ATTEMPT\nUSE 'LOGIN' COMMAND TO PROCEED.";
+                }
+            }
+            
+            // 命令解析
+            const cmd = command.toLowerCase();
+            
+            // 基本命令
+            if (cmd === Constants.COMMANDS.HELP) {
+                return "AVAILABLE COMMANDS:\n" +
+                        "- HELP: Display this help message\n" +
+                        "- STATUS: Show mission status\n" +
+                        "- CLEAR: Clear terminal screen\n" +
+                        "- EXIT: Logout of system\n" +
+                        "- RUN [PROGRAM]: Launch program\n" +
+                        "- LIST: List available programs";
+            } else if (cmd === Constants.COMMANDS.STATUS) {
+                return MissionModel.getMissionStatus();
+            } else if (cmd === Constants.COMMANDS.CLEAR) {
+                return "CLEAR_SCREEN";
+            } else if (cmd === Constants.COMMANDS.EXIT || cmd === Constants.COMMANDS.LOGOUT) {
+                return UserModel.logout();
+            } else if (cmd === Constants.COMMANDS.LIST) {
+                return "AVAILABLE PROGRAMS:\n" +
+                        "- FILE: File browser\n" +
+                        "- DOSSIER: Personnel database\n" +
+                        "- DECRYPT: Decryption utility\n" +
+                        "- COMMS: Communications system\n" +
+                        "- MAP: World map utility\n" +
+                        "- MISSION: Mission details";
+            } else if (cmd.startsWith(`${Constants.COMMANDS.RUN} `)) {
+                const app = cmd.substring(4).trim();
+                if (app === "file") {
+                    return "LAUNCH_APP:fileExplorer";
+                } else if (app === "dossier") {
+                    return "LAUNCH_APP:dossierSystem";
+                } else if (app === "decrypt") {
+                    return "LAUNCH_APP:decryptTool";
+                } else if (app === "comms" || app === "map" || app === "mission") {
+                    return `LAUNCHING ${app.toUpperCase()}...\nERROR: MODULE NOT AVAILABLE IN DEMO VERSION.`;
+                } else {
+                    return `ERROR: PROGRAM '${app}' NOT FOUND.`;
+                }
+            }
+            
+            // 默认响应
+            return `COMMAND NOT RECOGNIZED: ${command}\nTYPE 'HELP' FOR AVAILABLE COMMANDS.`;
+        }
+    };
+
+    // NavigationController - 管理焦点和导航
+    const NavigationController = {
+        currentFocus: 'terminal',
+        menuItems: [],
+        menuIndex: 0,
+        
+        init: function() {
+            this.menuItems = Array.from(document.querySelectorAll('.menu-item'));
+            this.updateHighlight();
+            this.initEventListeners();
+        },
+        
+        initEventListeners: function() {
+            document.addEventListener('keydown', this.handleKeyNavigation.bind(this));
+            
+            // 点击终端区域时，切换到终端模式
+            document.getElementById('terminal').addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                this.switchFocus('terminal');
+            });
+            
+            // 点击菜单区域时，切换到菜单模式
+            document.querySelector('.menu-panel').addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.switchFocus('menu');
+            });
+        },
+        
+        switchFocus: function(target) {
+            this.currentFocus = target;
+            
+            if (target === 'terminal') {
+                document.querySelector('.cursor').style.display = 'inline-block';
+                document.getElementById('user-input').focus();
+                UserInterfaceView.updateInfoBar("MODE: COMMAND INPUT");
+            } else {
+                document.querySelector('.cursor').style.display = 'none';
+                document.getElementById('user-input').blur();
+                this.ensureSelection();
+                const selectedText = this.getSelectedItemText();
+                UserInterfaceView.updateInfoBar(`SELECT: ${selectedText}`);
+            }
+            
+            EventBus.publish('navigation:focusChanged', target);
+        },
+        
+        handleKeyNavigation: function(e) {
+            // 方向键导航
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                if (e.key === 'ArrowUp') {
+                    this.navigateUp();
+                } else {
+                    this.navigateDown();
+                }
+                
+                // 如果在终端模式，自动切换到菜单模式
+                if (this.currentFocus === 'terminal') {
+                    this.switchFocus('menu');
+                }
+                
+                e.preventDefault();
+                return;
+            }
+            
+            // Enter键行为区分
+            if (e.key === 'Enter') {
+                if (this.currentFocus === 'terminal') {
+                    // 让TerminalController处理
+                    EventBus.publish('terminal:commandEntered');
+                } else {
+                    // 菜单模式：选择菜单项
+                    this.activateSelection();
+                }
+                e.preventDefault();
+                return;
+            }
+            
+            // Tab键切换焦点区域
+            if (e.key === 'Tab') {
+                if (this.currentFocus === 'terminal') {
+                    this.switchFocus('menu');
+                } else {
+                    this.switchFocus('terminal');
+                }
+                e.preventDefault();
+                return;
+            }
+            
+            // 如果按下其他键且当前不在终端模式，自动切换到终端模式
+            if (this.currentFocus !== 'terminal' && 
+                e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                this.switchFocus('terminal');
+            }
+        },
+        
+        navigateUp: function() {
+            this.menuIndex = (this.menuIndex - 1 + this.menuItems.length) % this.menuItems.length;
+            this.updateHighlight();
+        },
+        
+        navigateDown: function() {
+            this.menuIndex = (this.menuIndex + 1) % this.menuItems.length;
+            this.updateHighlight();
+        },
+        
+        activateSelection: function() {
+            if (this.menuItems.length > 0) {
+                const selectedItem = this.menuItems[this.menuIndex];
+                selectedItem.click();
+            }
+        },
+        
+        ensureSelection: function() {
+            if (this.menuItems.length > 0 && this.menuIndex < 0) {
+                this.menuIndex = 0;
+            }
+            this.updateHighlight();
+        },
+        
+        getSelectedItemText: function() {
+            if (this.menuItems.length > 0 && this.menuIndex >= 0 && this.menuIndex < this.menuItems.length) {
+                return this.menuItems[this.menuIndex].textContent;
+            }
+            return "NONE";
+        },
+        
+        updateHighlight: function() {
+            // 移除所有高亮
+            this.menuItems.forEach(item => item.classList.remove('selected'));
+            
+            // 设置新的高亮
+            if (this.menuItems.length > 0) {
+                this.menuItems[this.menuIndex].classList.add('selected');
+                
+                // 更新底部信息栏
+                const selectedText = this.getSelectedItemText();
+                UserInterfaceView.updateInfoBar(`SELECT: ${selectedText}`);
+            }
+        }
+    };
+
+    // TerminalView - 管理终端显示
+    const TerminalView = {
+        terminal: null,
+        output: null,
+        input: null,
+        commandText: null,
+        
+        init: function() {
+            this.terminal = document.getElementById('terminal');
+            this.output = document.getElementById('output');
+            this.input = document.getElementById('user-input');
+            this.commandText = document.getElementById('command-text');
+            
+            if (this.input && this.commandText) {
+                this.input.addEventListener('input', () => {
+                    this.updateCommandText();
+                });
+                
+                this.input.addEventListener('keydown', (e) => {
+                    if (e.key === ' ') {
+                        setTimeout(() => this.updateCursorPosition(), 10);
+                    }
+                });
+            }
+            
+            if (this.terminal && this.input) {
+                this.terminal.addEventListener('click', () => {
+                    this.input.focus();
+                });
+            }
+            
+            this.initFocusIndicator();
+            this.initCustomCursor();
+            
+            // 清屏并显示头部内容
+            this.clearScreen();
+        },
+        
+        clearScreen: function() {
+            this.output.innerHTML = Constants.TERMINAL_HEADER;
+        },
+        
+        appendOutput: function(text) {
+            if (text === "CLEAR_SCREEN") {
+                this.clearScreen();
+                return;
+            }
+            
+            if (text.startsWith("LAUNCH_APP:")) {
+                const appName = text.split(":")[1];
+                EventBus.publish('app:launch', appName);
+                return;
+            }
+            
+            this.output.innerHTML += text + "\n";
+            this.scrollToBottom();
+        },
+        
+        updateCommandText: function() {
+            if (this.commandText) {
+                this.commandText.textContent = this.input.value;
+                this.updateCursorPosition();
+            }
+        },
+        
+        scrollToBottom: function() {
+            this.terminal.scrollTop = this.terminal.scrollHeight;
+        },
+        
+        updateCursorPosition: function() {
+            const input = this.input;
+            const cursor = document.querySelector('.cursor');
+            const promptElement = document.querySelector('.prompt');
+            
+            if (!input || !cursor || !promptElement) return;
+            
+            try {
+                const textMeasure = document.createElement('span');
+                textMeasure.style.font = window.getComputedStyle(input).font;
+                textMeasure.style.position = 'absolute';
+                textMeasure.style.visibility = 'hidden';
+                textMeasure.style.whiteSpace = 'pre';
+                textMeasure.textContent = input.value.substring(0, input.selectionStart);
+                document.body.appendChild(textMeasure);
+                
+                const textWidth = textMeasure.getBoundingClientRect().width;
+                const promptWidth = promptElement.getBoundingClientRect().width;
+                
+                cursor.style.left = (promptWidth + textWidth) + 'px';
+                
+                document.body.removeChild(textMeasure);
+            } catch (error) {
+                console.log("光标位置更新出错:", error);
+            }
+        },
+        
+        initCustomCursor: function() {
+            const input = this.input;
+            const cursor = document.querySelector('.cursor');
+            
+            if (!input || !cursor) return;
+            
+            input.addEventListener('input', () => this.updateCursorPosition());
+            input.addEventListener('click', () => this.updateCursorPosition());
+            input.addEventListener('keydown', () => {
+                setTimeout(() => this.updateCursorPosition(), 0);
+            });
+            window.addEventListener('resize', () => this.updateCursorPosition());
+            
+            setTimeout(() => this.updateCursorPosition(), 10);
+            
+            input.focus();
+        },
+        
+        initFocusIndicator: function() {
+            const terminal = this.terminal;
+            const input = this.input;
+            
+            if (terminal && input) {
+                terminal.classList.add('input-focus');
+                
+                input.addEventListener('focus', () => {
+                    terminal.classList.add('input-focus');
+                });
+                
+                input.addEventListener('blur', () => {
+                    terminal.classList.remove('input-focus');
+                });
+            }
+        },
+        
+        getInput: function() {
+            return this.input.value.trim();
+        },
+        
+        clearInput: function() {
+            this.input.value = '';
+            if (this.commandText) {
+                this.commandText.textContent = '';
+            }
+            this.updateCursorPosition();
+        }
+    };
+
+    // ApplicationView - 管理应用程序窗口显示
+    const ApplicationView = {
+        init: function() {
+            // 初始化应用程序窗口处理
+            document.querySelectorAll('.close-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    EventBus.publish('app:close');
+                });
+            });
+        },
+        
+        showApp: function(appId) {
+            // 隐藏所有应用程序
+            document.querySelectorAll('.app-window').forEach(app => {
+                app.style.display = 'none';
+            });
+            
+            // 隐藏终端
+            document.getElementById('terminal').style.display = 'none';
+            
+            // 显示请求的应用程序
+            if (appId === Constants.APPS.TERMINAL) {
+                document.getElementById('terminal').style.display = 'block';
+                document.getElementById('user-input').focus();
+            } else {
+                const app = document.getElementById(appId);
+                if (app) {
+                    app.style.display = 'block';
+                }
+            }
+        },
+        
+        renderAppContent: function(appId, content) {
+            // 根据不同应用渲染内容
+            const app = document.getElementById(appId);
+            if (!app) return;
+            
+            const contentContainer = app.querySelector('.window-content');
+            if (contentContainer) {
+                contentContainer.innerHTML = content;
+            }
+        }
+    };
+
+    // UserInterfaceView - 管理用户界面通用元素
+    const UserInterfaceView = {
+        init: function() {
+            this.initAvatarUpload();
+        },
+        
+        updateClock: function(date) {
+            const clock = document.getElementById('clock');
+            if (!clock) return;
+            
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            const formattedTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+            clock.textContent = `${formattedDate} ${formattedTime}`;
+        },
+        
+        updateUserProfile: function(userProfile, authenticated) {
+            const userAvatar = document.getElementById('user-avatar');
+            const userName = document.getElementById('user-name');
+            
+            if (!userAvatar || !userName) {
+                console.log("无法找到用户头像或名称元素");
+                return;
+            }
+            
+            try {
+                // 更新头像
+                if (userProfile.avatar && authenticated) {
+                    userAvatar.src = userProfile.avatar;
+                    userAvatar.classList.remove('pixelated');
+                } else {
+                    // 默认或登出状态使用马赛克效果
+                    userAvatar.src = "data:image/jpeg;base64,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";
+                    userAvatar.classList.add('pixelated');
+                }
+                
+                // 更新用户名
+                if (authenticated) {
+                    userName.textContent = userProfile.name;
+                } else {
+                    userName.textContent = "No User";
+                }
+                } catch (error) {
+                console.log("更新用户档案时出错:", error);
+            }
+        },
+        
+        updateInfoBar: function(text) {
+            const infoText = document.getElementById('info-text');
+            if (infoText) {
+                infoText.textContent = text;
+            }
+        },
+        
+        bootSequence: function() {
+            const terminal = document.getElementById('terminal');
+            if (terminal) {
+                terminal.classList.add('flicker-effect');
+                setTimeout(() => {
+                    terminal.classList.remove('flicker-effect');
+                }, 2000);
+            }
+        },
+        
+        initAvatarUpload: function() {
+            const avatarContainer = document.querySelector('.avatar-container');
+            const avatarUpload = document.getElementById('avatar-upload');
+            
+            if (avatarContainer && avatarUpload) {
+                avatarContainer.addEventListener('click', () => {
+                    if (UserModel.isAuthenticated()) {
+                        avatarUpload.click();
+                    }
+                });
+                
+                avatarUpload.addEventListener('change', (e) => {
+                    if (e.target.files && e.target.files[0]) {
+                        const reader = new FileReader();
+                        
+                        reader.onload = (e) => {
+                            UserModel.updateAvatar(e.target.result);
+                        };
+                        
+                        reader.readAsDataURL(e.target.files[0]);
+                    }
+                });
+            }
+        }
+    };
+
+    // TerminalController - 管理终端输入和命令
+    const TerminalController = {
+        init: function() {
+            this.initEventListeners();
+        },
+        
+        initEventListeners: function() {
+            const input = document.getElementById('user-input');
+            if (!input) return;
+            
+            input.addEventListener('keydown', this.handleTerminalInput.bind(this));
+            
+            // 订阅命令回车事件
+            EventBus.subscribe('terminal:commandEntered', () => {
+                this.processCommand();
+            });
+        },
+        
+        handleTerminalInput: function(e) {
+            // 处理上下箭头导航命令历史
+            if (e.key === 'ArrowUp') {
+                const prevCommand = TerminalModel.getPreviousCommand();
+                if (prevCommand !== null) {
+                    TerminalView.input.value = prevCommand;
+                    TerminalView.updateCommandText();
+                }
+                e.preventDefault();
+            }
+            else if (e.key === 'ArrowDown') {
+                const nextCommand = TerminalModel.getNextCommand();
+                TerminalView.input.value = nextCommand;
+                TerminalView.updateCommandText();
+                e.preventDefault();
+            }
+        },
+        
+        processCommand: function() {
+            const command = TerminalView.getInput();
+            if (!command) return;
+            
+            // 添加命令到输出历史
+            TerminalView.appendOutput("> " + command);
+            
+            // 清空输入
+            TerminalView.clearInput();
+            
+            // 处理命令并显示响应
+            const response = TerminalModel.processCommand(command);
+            TerminalView.appendOutput(response);
+            
+            // 滚动到底部
+            TerminalView.scrollToBottom();
+        }
+    };
+
+    // ApplicationController - 管理应用程序
+    const ApplicationController = {
+        init: function() {
+            this.initEventListeners();
+        },
+        
+        initEventListeners: function() {
+            // 注册菜单点击事件
+            document.querySelectorAll('.menu-item').forEach(item => {
+                const appId = item.getAttribute('data-app');
+                if (appId) {
+                    item.addEventListener('click', () => this.launchApp(appId));
+                }
+            });
+            
+            // 监听应用启动事件
+            EventBus.subscribe('app:launch', (appId) => {
+                this.launchApp(appId);
+            });
+            
+            // 监听应用关闭事件
+            EventBus.subscribe('app:close', () => {
+                this.closeApp();
+            });
+            
+            // 登出按钮单独处理
+            document.getElementById('logoutBtn').addEventListener('click', this.handleLogout.bind(this));
+        },
+        
+        launchApp: function(appId) {
+            // 对login菜单项做特殊处理，登出状态下也允许访问
+            if (appId === 'login') {
+                if (UserModel.isAuthenticated()) {
+                    TerminalView.appendOutput("NOTICE: ALREADY LOGGED IN AS AGENT.");
+                } else {
+                    UserModel.login();
+                }
+                this.showTerminal();
+                return;
+            }
+
+            // 对其他菜单项进行权限检查
+            if (!UserModel.isAuthenticated() && appId !== Constants.APPS.TERMINAL) {
+                TerminalView.appendOutput("ERROR: AUTHENTICATION REQUIRED");
+                this.showTerminal();
+                return;
+            }
+            
+            // 处理特殊应用
+            if (appId === 'settings') {
+                TerminalView.appendOutput("LAUNCHING SETTINGS MODULE...\nSYSTEM SETTINGS NOT AVAILABLE IN CURRENT TERMINAL VERSION.");
+                this.showTerminal();
+                return;
+            }
+
+            if (appId === 'mail') {
+                TerminalView.appendOutput("LAUNCHING MAIL CLIENT...\nINBOX: EMPTY\nNO NEW MESSAGES.");
+                this.showTerminal();
+                return;
+            }
+
+            if (appId === 'musicPlayer') {
+                TerminalView.appendOutput("LAUNCHING MUSIC PLAYER...\nPLAYING: L'envol - Oil Astral\nVOLUME: 80%\nPRESS SPACE TO PAUSE/PLAY");
+                this.showTerminal();
+                return;
+            }
+            
+            if (appId === 'help') {
+                TerminalView.appendOutput("HELP SYSTEM\n-----------\n" +
+                                        "USE KEYBOARD ARROWS TO NAVIGATE MENU\n" +
+                                        "PRESS ENTER TO SELECT\n" +
+                                        "PRESS TAB TO SWITCH BETWEEN TERMINAL AND MENU\n" +
+                                        "TYPE 'HELP' IN TERMINAL FOR COMMAND LIST");
+                this.showTerminal();
+                return;
+            }
+            
+            // 显示请求的应用程序
+            ApplicationView.showApp(appId);
+            SystemModel.changeScreen(appId);
+            
+            // 确保焦点正确
+            NavigationController.switchFocus('terminal');
+        },
+        
+        closeApp: function() {
+            this.showTerminal();
+        },
+        
+        showTerminal: function() {
+            ApplicationView.showApp(Constants.APPS.TERMINAL);
+            SystemModel.changeScreen(Constants.APPS.TERMINAL);
+        },
+        
+        handleLogout: function() {
+            UserModel.logout();
+            this.showTerminal();
+            TerminalView.appendOutput("LOGOUT SUCCESSFUL\nSYSTEM LOCKED");
+        }
+    };
+
+    // EffectsManager - 管理视觉和音效
+    const EffectsManager = {
+        init: function() {
+            // 初始化音效和视觉效果
+        },
+        
+        playBootSequence: function() {
+            UserInterfaceView.bootSequence();
+        }
+    };
+
+    // App - 应用入口
+    const App = {
+        init: function() {
+            // 初始化各个模块
+            UserModel.init();
+            SystemModel.init();
+            MissionModel.init();
+            TerminalModel.init();
+            
+            TerminalView.init();
+            ApplicationView.init();
+            UserInterfaceView.init();
+            
+            NavigationController.init();
+            TerminalController.init();
+            ApplicationController.init();
+            EffectsManager.init();
+            
+            // 设置事件订阅
+            this.setupEventSubscriptions();
+            
+            // 初始化完成，启动应用
+            this.start();
+            // 设置事件订阅
+           this.setupEventSubscriptions();
+           
+           // 初始化完成，启动应用
+           this.start();
+        },
+        
+        setupEventSubscriptions: function() {
+            // 系统时间更新
+            EventBus.subscribe('system:timeUpdated', (date) => {
+                UserInterfaceView.updateClock(date);
+            });
+            
+            // 用户登录/登出
+            EventBus.subscribe('user:login', (profile) => {
+                UserInterfaceView.updateUserProfile(profile, true);
+            });
+            
+            EventBus.subscribe('user:logout', () => {
+                UserInterfaceView.updateUserProfile(UserModel.profile, false);
+            });
+            
+            EventBus.subscribe('user:avatarChanged', () => {
+                UserInterfaceView.updateUserProfile(UserModel.profile, UserModel.isAuthenticated());
+            });
+            
+            // 系统重启
+            EventBus.subscribe('system:reboot', () => {
+                TerminalView.output.innerHTML = 'SYSTEM REBOOTING...\n';
+                UserModel.authenticated = true;
+            });
+            
+            EventBus.subscribe('system:bootComplete', () => {
+                EffectsManager.playBootSequence();
+                TerminalView.clearScreen();
+                NavigationController.switchFocus('terminal');
+            });
+        },
+        
+        start: function() {
+            // 显示初始启动动画
+            EffectsManager.playBootSequence();
+            
+            // 初始显示终端内容
+            TerminalView.clearScreen();
+            
+            // 设置初始焦点
+            NavigationController.switchFocus('terminal');
+            
+            // 设置初始用户信息
+            UserInterfaceView.updateUserProfile(UserModel.profile, UserModel.isAuthenticated());
+        }
+    };
+    
+    // 文档加载完成后初始化应用
+    document.addEventListener('DOMContentLoaded', function() {
+        // 确保DOM完全加载后执行初始化
+        setTimeout(() => {
+            try {
+                App.init();
+            } catch (e) {
+                console.error("初始化错误:", e);
+            }
+        }, 100);
+    });
+
+    </script>
+</body>
+</html>
