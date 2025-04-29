@@ -437,6 +437,96 @@
         }
 
         /* 邮件客户端样式尾部 */
+
+        /* 文件浏览器样式头部 */
+        .file-header {
+            display: flex;
+            padding: 5px 0;
+            border-bottom: 1px solid #e3af00;
+            margin-bottom: 10px;
+        }
+
+        .file-path-display {
+            flex: 1;
+            font-weight: bold;
+        }
+
+        .file-item {
+            display: flex;
+            padding: 5px 0;
+            cursor: pointer;
+            margin-bottom: 3px;
+            border-bottom: 1px dotted rgba(227, 175, 0, 0.3);
+        }
+
+        .file-item:hover {
+            background-color: rgba(227, 175, 0, 0.2);
+        }
+
+        .file-item.selected {
+            background-color: rgba(227, 175, 0, 0.4);
+            border-bottom: 1px solid #e3af00;
+        }
+
+        .file-icon {
+            width: 24px;
+            text-align: center;
+            margin-right: 8px;
+        }
+
+        .file-name {
+            flex: 1;
+        }
+
+        /* 文件详情视图样式 */
+        .file-detail-header {
+            margin-bottom: 15px;
+        }
+
+        .file-detail-nav {
+            margin-bottom: 10px;
+        }
+
+        .file-back-btn {
+            cursor: pointer;
+            margin-right: 15px;
+        }
+
+        .file-back-btn:hover {
+            text-decoration: underline;
+        }
+
+        .file-detail-info div {
+            margin-bottom: 5px;
+        }
+
+        .file-separator {
+            margin: 10px 0;
+            padding: 5px 0;
+            border-top: 1px solid #e3af00;
+            border-bottom: 1px solid #e3af00;
+            text-align: center;
+        }
+
+        .file-detail-content {
+            white-space: pre-wrap;
+            line-height: 1.5;
+            padding: 10px 0;
+            min-height: 200px;
+        }
+
+        .file-footer {
+            margin-top: 20px;
+            text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid #e3af00;
+        }
+
+        .up-directory {
+            font-weight: bold;
+        }
+
+        /* 文件浏览器样式尾部 */
         
         /* 状态栏 */
         .status-bar {
@@ -599,11 +689,33 @@
                         <span class="close-btn">[X]</span>
                     </div>
                     <div class="window-content">
-                        <div class="file-item">[DIR] MISSIONS</div>
-                        <div class="file-item">[DIR] INTEL</div>
-                        <div class="file-item">[DIR] PERSONNEL</div>
-                        <div class="file-item">[TXT] README.TXT</div>
-                        <div class="file-item">[TXT] CURRENT_MISSION.TXT</div>
+                        <!-- 目录浏览视图 -->
+                        <div id="file-list-view">
+                            <div class="file-header">
+                                <span class="file-path-display" id="current-path">PATH: /</span>
+                            </div>
+                            <div id="file-list-container">
+                                <!-- 文件列表将动态加载 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 文件内容视图 (初始隐藏) -->
+                        <div id="file-detail-view" style="display: none;">
+                            <div class="file-detail-header">
+                                <div class="file-detail-nav">
+                                    <span class="file-back-btn">[←BACK]</span>
+                                </div>
+                                <div class="file-detail-info">
+                                    <div class="file-detail-name">File: <span id="file-name"></span></div>
+                                    <div class="file-detail-type">Type: <span id="file-type"></span></div>
+                                </div>
+                            </div>
+                            <div class="file-separator">FILE CONTENT</div>
+                            <div id="file-content" class="file-detail-content"></div>
+                            <div class="file-footer">
+                                //END OF FILE//
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1667,6 +1779,316 @@
             }
         };
 
+        // FileView - 管理文件浏览器显示
+        const FileView = {
+            // 当前选中的文件索引
+            selectedIndex: 0,
+            // 当前显示视图 (list/detail)
+            currentView: 'list',
+            // 当前显示的文件列表
+            displayedFiles: [],
+            // 当前路径
+            currentPath: "",
+            // 是否处于活动状态
+            isActive: false,
+
+            // 确保视图状态与当前模式匹配
+            ensureViewState: function() {
+                if (this.currentView === 'list') {
+                    document.getElementById('file-list-view').style.display = 'block';
+                    document.getElementById('file-detail-view').style.display = 'none';
+                } else {
+                    document.getElementById('file-list-view').style.display = 'none';
+                    document.getElementById('file-detail-view').style.display = 'block';
+                }
+            },
+            
+            // 初始化
+            init: function() {
+                this.initEventListeners();
+                
+                // 增加视图状态订阅
+                EventBus.subscribe('app:launch', (appId) => {
+                    if (appId === 'fileExplorer') {
+                        // 确保每次启动时都是列表视图并在根目录
+                        setTimeout(() => {
+                            this.currentView = 'list';
+                            this.currentPath = "";
+                            this.ensureViewState();
+                            this.loadDirectory(this.currentPath);
+                        }, 50);
+                    }
+                });
+            },
+            
+            // 初始化事件监听器
+            initEventListeners: function() {
+                // 返回按钮点击事件
+                document.querySelector('.file-back-btn').addEventListener('click', () => {
+                    this.showListView();
+                });
+                
+                // 订阅应用程序退出请求
+                EventBus.subscribe('app:requestExit', () => {
+                    if (SystemModel.currentScreen === 'fileExplorer') {
+                        if (this.currentView === 'detail') {
+                            // 如果在详情视图，先返回列表视图
+                            this.showListView();
+                        } else if (this.currentPath !== "") {
+                            // 如果不在根目录，返回上一级目录
+                            this.navigateToParentDirectory();
+                        } else {
+                            // 如果已经在根目录列表视图，则退出应用
+                            EventBus.publish('app:close');
+                        }
+                    }
+                });
+                
+                // 订阅导航模式变化
+                EventBus.subscribe('navigation:modeChanged', (mode) => {
+                    this.isActive = (mode === 'app' && SystemModel.currentScreen === 'fileExplorer');
+                });
+
+                // 订阅应用激活事件
+                EventBus.subscribe('app:activated', (appId) => {
+                    if (appId === 'fileExplorer') {
+                        // 确保为列表视图
+                        this.currentView = 'list';
+                        this.isActive = true;
+                        this.ensureViewState();
+                        this.updateSelection();
+                    }
+                });
+                
+                // 全局键盘事件监听
+                document.addEventListener('keydown', (e) => {
+                    // 仅当文件应用活动时处理键盘事件
+                    if (!this.isActive || SystemModel.currentScreen !== 'fileExplorer') return;
+                    
+                    // 确保视图状态与实际显示一致
+                    this.ensureViewState();
+                    
+                    // 如果在应用焦点模式下但没有响应键盘，尝试激活
+                    if (NavigationController.focusMode === 'app' && !this.isActive) {
+                        this.isActive = true;
+                    }
+                    
+                    // 处理不同视图模式下的键盘事件
+                    if (this.currentView === 'list') {
+                        // 列表视图下的键盘导航
+                        switch (e.key) {
+                            case 'ArrowUp':
+                                this.selectPrevFile();
+                                e.preventDefault();
+                                break;
+                            case 'ArrowDown':
+                                this.selectNextFile();
+                                e.preventDefault();
+                                break;
+                            case 'Enter':
+                                this.openSelectedItem();
+                                e.preventDefault();
+                                break;
+                            case 'Backspace':
+                                // 返回上级目录
+                                if (this.currentPath !== "") {
+                                    this.navigateToParentDirectory();
+                                    e.preventDefault();
+                                }
+                                break;
+                        }
+                    } else if (this.currentView === 'detail') {
+                        // 详情视图下的键盘导航
+                        switch (e.key) {
+                            case 'ArrowLeft':
+                            case 'Backspace':
+                                this.showListView();
+                                e.preventDefault();
+                                break;
+                        }
+                    }
+                });
+            },
+            
+            // 加载并显示指定目录
+            loadDirectory: function(path) {
+                this.currentPath = path;
+                
+                // 更新路径显示
+                document.getElementById('current-path').textContent = `PATH: /${path}`;
+                
+                // 获取目录内容
+                let files = SaveManager.FileDataModule.getFilesByPath(path);
+                
+                // 为非根目录添加返回上级目录的选项
+                if (path !== "") {
+                    // 使用特殊标记，不是真实文件
+                    files.unshift({
+                        id: "parent-dir",
+                        type: "UP-DIR",
+                        title: "..",
+                        isParentDir: true
+                    });
+                }
+                
+                // 设置显示文件列表
+                this.displayedFiles = files;
+                this.selectedIndex = 0;
+                
+                // 渲染文件列表
+                this.renderFileList();
+            },
+            
+            // 导航到父级目录
+            navigateToParentDirectory: function() {
+                if (this.currentPath === "") return;
+                
+                const pathParts = this.currentPath.split('/');
+                pathParts.pop(); // 移除最后一个部分
+                const parentPath = pathParts.join('/');
+                
+                this.loadDirectory(parentPath);
+            },
+            
+            // 渲染文件列表
+            renderFileList: function() {
+                const container = document.getElementById('file-list-container');
+                container.innerHTML = '';
+                
+                if (this.displayedFiles.length === 0) {
+                    container.innerHTML = '<div class="no-file-message">DIRECTORY EMPTY</div>';
+                    return;
+                }
+                
+                // 创建文件列表项
+                this.displayedFiles.forEach((file, index) => {
+                    const row = document.createElement('div');
+                    row.className = `file-item ${index === this.selectedIndex ? 'selected' : ''}`;
+                    row.setAttribute('data-index', index);
+                    
+                    // 设置图标
+                    let icon = '[TXT]';
+                    if (file.type === 'DIR') {
+                        icon = '[DIR]';
+                    } else if (file.type === 'EXE') {
+                        icon = '[EXE]';
+                    } else if (file.type === 'IMG') {
+                        icon = '[IMG]';
+                    } else if (file.type === 'UP-DIR') {
+                        icon = '[..]';
+                    }
+                    
+                    // 显示文件名（不包含路径）
+                    let displayName = file.title;
+                    if (!file.isParentDir) {
+                        // 提取文件名（不含路径）
+                        const nameParts = file.title.split('/');
+                        displayName = nameParts[nameParts.length - 1];
+                    }
+                    
+                    // 组装行内容
+                    row.innerHTML = `
+                        <span class="file-icon">${icon}</span>
+                        <span class="file-name">${displayName}</span>
+                    `;
+                    
+                    // 添加点击事件
+                    row.addEventListener('click', () => {
+                        this.selectedIndex = index;
+                        this.updateSelection();
+                        this.openSelectedItem();
+                    });
+                    
+                    container.appendChild(row);
+                });
+                
+                // 确保选中项高亮
+                this.updateSelection();
+                
+                // 更新信息栏
+                UserInterfaceView.updateInfoBar("FILE BROWSER: USE ARROWS to NAVIGATE, ENTER to OPEN, BACKSPACE for PARENT DIR");
+            },
+            
+            // 打开选中的项目（文件或目录）
+            openSelectedItem: function() {
+                if (this.displayedFiles.length === 0) return;
+                
+                const selectedFile = this.displayedFiles[this.selectedIndex];
+                if (!selectedFile) return;
+                
+                // 处理上级目录
+                if (selectedFile.isParentDir) {
+                    this.navigateToParentDirectory();
+                    return;
+                }
+                
+                // 根据类型处理
+                if (selectedFile.type === 'DIR') {
+                    // 如果是目录，进入该目录
+                    let newPath = selectedFile.title;
+                    this.loadDirectory(newPath);
+                } else {
+                    // 如果是文件，显示文件内容
+                    this.viewFileContent(selectedFile);
+                }
+            },
+            
+            // 显示文件内容
+            viewFileContent: function(file) {
+                // 更新UI元素
+                document.getElementById('file-name').textContent = file.title;
+                document.getElementById('file-type').textContent = file.type;
+                document.getElementById('file-content').textContent = file.content || "NO CONTENT AVAILABLE";
+                
+                // 切换到详情视图
+                this.currentView = 'detail';
+                this.ensureViewState();
+                
+                // 更新信息栏
+                UserInterfaceView.updateInfoBar("FILE CONTENT: BACKSPACE or LEFT ARROW to RETURN");
+            },
+            
+            // 返回列表视图
+            showListView: function() {
+                this.currentView = 'list';
+                document.getElementById('file-detail-view').style.display = 'none';
+                document.getElementById('file-list-view').style.display = 'block';
+                
+                // 更新信息栏
+                UserInterfaceView.updateInfoBar("FILE BROWSER: USE ARROWS to NAVIGATE, ENTER to OPEN, BACKSPACE for PARENT DIR");
+            },
+            
+            // 更新选中项的高亮
+            updateSelection: function() {
+                const rows = document.querySelectorAll('.file-item');
+                rows.forEach((row, index) => {
+                    if (index === this.selectedIndex) {
+                        row.classList.add('selected');
+                        // 确保选中的行可见
+                        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    } else {
+                        row.classList.remove('selected');
+                    }
+                });
+            },
+            
+            // 选择上一个文件
+            selectPrevFile: function() {
+                if (this.displayedFiles.length === 0) return;
+                
+                this.selectedIndex = Math.max(0, this.selectedIndex - 1);
+                this.updateSelection();
+            },
+            
+            // 选择下一个文件
+            selectNextFile: function() {
+                if (this.displayedFiles.length === 0) return;
+                
+                this.selectedIndex = Math.min(this.displayedFiles.length - 1, this.selectedIndex + 1);
+                this.updateSelection();
+            }
+        };
+
         // NavigationController - 管理焦点和导航
         const NavigationController = {
             currentFocus: 'terminal',
@@ -2168,6 +2590,60 @@
             }
         };
 
+        // FileController - 管理文件程序
+        const FileController = {
+            init: function() {
+                // 初始化文件视图
+                FileView.init();
+                
+                // 订阅相关事件
+                this.setupEventListeners();
+            },
+            
+            setupEventListeners: function() {
+                // 监听文件程序启动事件
+                EventBus.subscribe('app:launch', (appId) => {
+                    if (appId === 'fileExplorer') {
+                        this.openFileExplorer();
+                    }
+                });
+            },
+            
+            openFileExplorer: function() {
+                // 确保用户已登录
+                if (!UserModel.isAuthenticated()) {
+                    TerminalView.appendOutput("ERROR: AUTHENTICATION REQUIRED");
+                    ApplicationController.showTerminal();
+                    return;
+                }
+                
+                // 重置文件视图状态
+                FileView.selectedIndex = 0;
+                FileView.currentView = 'list';
+                FileView.isActive = true;
+                FileView.currentPath = "";
+                
+                // 显示文件列表视图，隐藏详情视图
+                document.getElementById('file-list-view').style.display = 'block';
+                document.getElementById('file-detail-view').style.display = 'none';
+                
+                // 加载根目录
+                FileView.loadDirectory("");
+                
+                // 显示文件浏览器应用
+                ApplicationView.showApp('fileExplorer');
+                SystemModel.changeScreen('fileExplorer');
+                
+                // 设置为应用焦点模式
+                NavigationController.setFocusMode('app');
+                
+                // 确保选中状态更新
+                setTimeout(() => {
+                    FileView.updateSelection();
+                }, 100);
+            }
+        };
+        
         // EffectsManager - 管理视觉和音效
         const EffectsManager = {
             init: function() {
@@ -2197,6 +2673,7 @@
                 TerminalController.init();
                 ApplicationController.init();
                 MailController.init();
+                FileController.init();
                 EffectsManager.init();
                 
                 // 设置事件订阅
@@ -2334,7 +2811,7 @@
                 }
             },
             
-            // 邮件数据模块 - 嵌套在SaveManager内部
+            // 邮件数据模块
             EmailDataModule: {
                 // 获取所有邮件
                 getAllEmails: function() {
@@ -2446,6 +2923,172 @@
                 }
             },
             
+            // 文件数据模块
+            FileDataModule: {
+                // 获取所有文件
+                getAllFiles: function() {
+                    return SaveManager.gameData.files.list || [];
+                },
+                
+                // 按ID获取文件
+                getFileById: function(id) {
+                    const files = this.getAllFiles();
+                    return files.find(file => file.id === id);
+                },
+                
+                // 按类型获取文件
+                getFilesByType: function(type) {
+                    const files = this.getAllFiles();
+                    return files.filter(file => file.type === type);
+                },
+                
+                // 按路径获取文件
+                getFilesByPath: function(path) {
+                    const files = this.getAllFiles();
+                    return files.filter(file => {
+                        // 路径匹配逻辑，支持目录层级
+                        const filePath = file.title.split('/');
+                        const requestPath = path.split('/');
+                        
+                        // 如果请求路径是根目录并且文件没有路径分隔符，返回顶级文件
+                        if (path === "" || path === "/") {
+                            return !file.title.includes('/');
+                        }
+                        
+                        // 否则检查路径前缀是否匹配
+                        return file.title.startsWith(path + '/') || file.title === path;
+                    });
+                },
+                
+                // 添加新文件
+                addFile: function(fileData) {
+                    // 确保files.list存在
+                    if (!SaveManager.gameData.files.list) {
+                        SaveManager.gameData.files.list = [];
+                    }
+                    
+                    // 生成唯一ID
+                    const id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                    
+                    // 创建文件对象
+                    const file = {
+                        id: id,
+                        type: fileData.type,   // 例如: "TXT", "DIR", "IMG", "EXE" 等
+                        title: fileData.title, // 包含路径的文件名，如 "MISSIONS/SECRET.TXT"
+                        content: fileData.content
+                    };
+                    
+                    // 添加到文件数组
+                    SaveManager.gameData.files.list.push(file);
+                    
+                    // 保存更新
+                    SaveManager.saveData('files', SaveManager.gameData.files);
+                    
+                    return file;
+                },
+                
+                // 更新文件
+                updateFile: function(id, newData) {
+                    const file = this.getFileById(id);
+                    if (file) {
+                        if (newData.type !== undefined) file.type = newData.type;
+                        if (newData.title !== undefined) file.title = newData.title;
+                        if (newData.content !== undefined) file.content = newData.content;
+                        
+                        SaveManager.saveData('files', SaveManager.gameData.files);
+                        return true;
+                    }
+                    return false;
+                },
+                
+                // 删除文件
+                deleteFile: function(id) {
+                    if (!SaveManager.gameData.files.list) return false;
+                    
+                    const initialLength = SaveManager.gameData.files.list.length;
+                    SaveManager.gameData.files.list = SaveManager.gameData.files.list.filter(file => file.id !== id);
+                    
+                    // 如果数组长度变化了，说明删除成功
+                    if (initialLength !== SaveManager.gameData.files.list.length) {
+                        SaveManager.saveData('files', SaveManager.gameData.files);
+                        return true;
+                    }
+                    return false;
+                },
+                
+                // 初始化默认文件
+                initDefaultFiles: function() {
+                    // 清空现有文件
+                    SaveManager.gameData.files = { list: [] };
+                    
+                    // 添加默认文件
+                    this.addFile({
+                        type: "TXT",
+                        title: "README.TXT",
+                        content: "WELCOME TO CIA TERMINAL SYSTEM\n\nTHIS SYSTEM IS DESIGNED FOR SECURE COMMUNICATIONS AND INTELLIGENCE GATHERING.\n\nUSE THE FILE BROWSER TO ACCESS MISSION DOCUMENTS AND INTELLIGENCE REPORTS.\n\nCONTACT TECHNICAL SUPPORT IF YOU ENCOUNTER ANY ISSUES."
+                    });
+                    
+                    this.addFile({
+                        type: "TXT",
+                        title: "CURRENT_MISSION.TXT",
+                        content: "MISSION: EAGLE EYE\n\nOBJECTIVE: MONITOR DIPLOMATIC COMMUNICATIONS FROM SOVIET EMBASSY\n\nSTATUS: ACTIVE\n\nDETAILS:\n1. INTERCEPT ALL OUTGOING COMMUNICATIONS\n2. DECODE ENCRYPTED MESSAGES USING DECRYPTION TOOL\n3. REPORT ANY SUSPICIOUS ACTIVITY\n\nCONTACT HANDLER IF SITUATION ESCALATES."
+                    });
+                    
+                    // 添加目录
+                    this.addFile({
+                        type: "DIR",
+                        title: "MISSIONS",
+                        content: "DIRECTORY: CONTAINS MISSION BRIEFINGS AND REPORTS"
+                    });
+                    
+                    this.addFile({
+                        type: "DIR",
+                        title: "INTEL",
+                        content: "DIRECTORY: CONTAINS INTELLIGENCE REPORTS AND ANALYSIS"
+                    });
+                    
+                    this.addFile({
+                        type: "DIR",
+                        title: "PERSONNEL",
+                        content: "DIRECTORY: CONTAINS AGENT PROFILES AND CONTACT INFORMATION"
+                    });
+                    
+                    // 添加MISSIONS目录下的文件
+                    this.addFile({
+                        type: "TXT",
+                        title: "MISSIONS/EAGLE_EYE.TXT",
+                        content: "MISSION BRIEF: EAGLE EYE\n\nCODE NAME: EAGLE EYE\nCLASSIFICATION: TOP SECRET\nLOCATION: WASHINGTON D.C.\nDURATION: ONGOING\n\nOBJECTIVE:\nEstablish surveillance on Soviet diplomatic channels. Monitor for encoded transmissions that may indicate espionage activities.\n\nRESOURCES:\n- Terminal access to SIGINT database\n- Decryption tools\n- Field agents on standby\n\nPROCEDURE:\n1. Monitor all communications channels daily\n2. Decrypt any suspicious messages\n3. Cross-reference with known Soviet codes\n4. Report findings through secure channels\n\nAUTHORIZATION:\nDirector of Operations\n28-APR-1982"
+                    });
+                    
+                    // 添加MISSIONS/ARCHIVE子目录
+                    this.addFile({
+                        type: "DIR",
+                        title: "MISSIONS/ARCHIVE",
+                        content: "DIRECTORY: CONTAINS COMPLETED MISSION REPORTS"
+                    });
+                    
+                    this.addFile({
+                        type: "TXT",
+                        title: "MISSIONS/ARCHIVE/BLUEJAY.TXT",
+                        content: "MISSION BRIEF: BLUE JAY\n\nCODE NAME: BLUE JAY\nCLASSIFICATION: SECRET\nLOCATION: WEST BERLIN\nDURATION: COMPLETED (1981)\n\nOBJECTIVE:\nInfiltrate suspected KGB front organization and recover intelligence on East German operations.\n\nOUTCOME:\nSuccess. Recovered documents revealing three deep cover agents in NATO.\n\nCASUALTIES: None\n\nNOTES:\nFollow-up surveillance recommended on identified associates."
+                    });
+                    
+                    // 添加INTEL目录下的文件
+                    this.addFile({
+                        type: "TXT",
+                        title: "INTEL/SOVIET_EMBASSY_STAFF.TXT",
+                        content: "SOVIET EMBASSY PERSONNEL - WASHINGTON D.C.\n\nOFFICIAL DIPLOMATIC STAFF:\n\n1. VIKTOR PETROV - AMBASSADOR\n   ARRIVED: 1980-03-15\n   NOTES: CAREER DIPLOMAT, NO KNOWN KGB AFFILIATIONS\n\n2. MIKHAIL BARANOV - CULTURAL ATTACHÉ\n   ARRIVED: 1981-06-22\n   NOTES: SUSPECTED GRU INTELLIGENCE OFFICER\n\n3. NATALIA SOKOLOVA - PRESS SECRETARY\n   ARRIVED: 1979-11-04\n   NOTES: CLEAN BACKGROUND\n\n4. DMITRI VOLKOV - FIRST SECRETARY\n   ARRIVED: 1981-01-10\n   NOTES: UNUSUAL COMMUNICATION PATTERNS DETECTED\n         POSSIBLE HANDLER FOR ASSETS\n         PRIORITY SURVEILLANCE TARGET\n\n5. IVAN KUZNETSOV - ECONOMIC ADVISOR\n   ARRIVED: 1982-02-18\n   NOTES: RECENT ARRIVAL, BACKGROUND CHECK PENDING"
+                    });
+                    
+                    // 添加PERSONNEL目录下的文件
+                    this.addFile({
+                        type: "TXT",
+                        title: "PERSONNEL/CONTACTS.TXT",
+                        content: "EMERGENCY CONTACTS\n\nFIELD OPERATIONS:\nHANDLER: JOHNSON\nCODE: OSCAR-DELTA-7\nEMERGENCY LINE: 555-3900\n\nTECHNICAL SUPPORT:\nLEAD: CLARKE\nCODE: TANGO-SIERRA-2\nDIRECT LINE: 555-4017\n\nEXTRACTION TEAM:\nLEAD: MARTINEZ\nCODE: ECHO-XRAY-9\nSTANDBY: 24HR\n\nSAFE HOUSES:\n1. GEORGETOWN - 1429 WISCONSIN AVE\n   PASSPHRASE: \"THE WEATHER IN CHICAGO IS UNPREDICTABLE\"\n\n2. ALEXANDRIA - 227 KING STREET\n   PASSPHRASE: \"I'M LOOKING FOR MY BROTHER'S RECORD COLLECTION\"\n\nMEDICAL:\nDR. WILSON - 555-6332\nCODE: MEDICAL SITUATION ALPHA"
+                    });
+                }
+            },
+
             // 此处可以添加其他数据模块，如FileDataModule, MissionDataModule等
             
             // 初始化所有模块默认数据
