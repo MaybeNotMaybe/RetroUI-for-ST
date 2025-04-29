@@ -904,147 +904,6 @@
             }
         };
 
-        // NavigationController - 管理焦点和导航
-        const NavigationController = {
-            currentFocus: 'terminal',
-            menuItems: [],
-            menuIndex: 0,
-            
-            init: function() {
-                this.menuItems = Array.from(document.querySelectorAll('.menu-item'));
-                this.updateHighlight();
-                this.initEventListeners();
-            },
-            
-            initEventListeners: function() {
-                document.addEventListener('keydown', this.handleKeyNavigation.bind(this));
-                
-                // 点击终端区域时，切换到终端模式
-                document.getElementById('terminal').addEventListener('click', (e) => {
-                    e.stopPropagation(); 
-                    this.switchFocus('terminal');
-                });
-                
-                // 点击菜单区域时，切换到菜单模式
-                document.querySelector('.menu-panel').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.switchFocus('menu');
-                });
-            },
-            
-            switchFocus: function(target) {
-                this.currentFocus = target;
-                
-                if (target === 'terminal') {
-                    document.querySelector('.cursor').style.display = 'inline-block';
-                    document.getElementById('user-input').focus();
-                    UserInterfaceView.updateInfoBar("MODE: COMMAND INPUT");
-                } else {
-                    document.querySelector('.cursor').style.display = 'none';
-                    document.getElementById('user-input').blur();
-                    this.ensureSelection();
-                    const selectedText = this.getSelectedItemText();
-                    UserInterfaceView.updateInfoBar(`SELECT: ${selectedText}`);
-                }
-                
-                EventBus.publish('navigation:focusChanged', target);
-            },
-            
-            handleKeyNavigation: function(e) {
-                // 方向键导航
-                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                    if (e.key === 'ArrowUp') {
-                        this.navigateUp();
-                    } else {
-                        this.navigateDown();
-                    }
-                    
-                    // 如果在终端模式，自动切换到菜单模式
-                    if (this.currentFocus === 'terminal') {
-                        this.switchFocus('menu');
-                    }
-                    
-                    e.preventDefault();
-                    return;
-                }
-                
-                // Enter键行为区分
-                if (e.key === 'Enter') {
-                    if (this.currentFocus === 'terminal') {
-                        // 让TerminalController处理
-                        EventBus.publish('terminal:commandEntered');
-                    } else {
-                        // 菜单模式：选择菜单项
-                        this.activateSelection();
-                    }
-                    e.preventDefault();
-                    return;
-                }
-                
-                // Tab键切换焦点区域
-                if (e.key === 'Tab') {
-                    if (this.currentFocus === 'terminal') {
-                        this.switchFocus('menu');
-                    } else {
-                        this.switchFocus('terminal');
-                    }
-                    e.preventDefault();
-                    return;
-                }
-                
-                // 如果按下其他键且当前不在终端模式，自动切换到终端模式
-                if (this.currentFocus !== 'terminal' && 
-                    e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-                    this.switchFocus('terminal');
-                }
-            },
-            
-            navigateUp: function() {
-                this.menuIndex = (this.menuIndex - 1 + this.menuItems.length) % this.menuItems.length;
-                this.updateHighlight();
-            },
-            
-            navigateDown: function() {
-                this.menuIndex = (this.menuIndex + 1) % this.menuItems.length;
-                this.updateHighlight();
-            },
-            
-            activateSelection: function() {
-                if (this.menuItems.length > 0) {
-                    const selectedItem = this.menuItems[this.menuIndex];
-                    selectedItem.click();
-                }
-            },
-            
-            ensureSelection: function() {
-                if (this.menuItems.length > 0 && this.menuIndex < 0) {
-                    this.menuIndex = 0;
-                }
-                this.updateHighlight();
-            },
-            
-            getSelectedItemText: function() {
-                if (this.menuItems.length > 0 && this.menuIndex >= 0 && this.menuIndex < this.menuItems.length) {
-                    return this.menuItems[this.menuIndex].textContent;
-                }
-                return "NONE";
-            },
-            
-            updateHighlight: function() {
-                // 移除所有高亮
-                this.menuItems.forEach(item => item.classList.remove('selected'));
-                
-                // 设置新的高亮
-                if (this.menuItems.length > 0) {
-                    this.menuItems[this.menuIndex].classList.add('selected');
-                    
-                    // 更新底部信息栏
-                    const selectedText = this.getSelectedItemText();
-                    UserInterfaceView.updateInfoBar(`SELECT: ${selectedText}`);
-                }
-            }
-        };
-
         // TerminalView - 管理终端显示
         const TerminalView = {
             terminal: null,
@@ -1318,6 +1177,147 @@
                             reader.readAsDataURL(e.target.files[0]);
                         }
                     });
+                }
+            }
+        };
+
+        // NavigationController - 管理焦点和导航
+        const NavigationController = {
+            currentFocus: 'terminal',
+            menuItems: [],
+            menuIndex: 0,
+            
+            init: function() {
+                this.menuItems = Array.from(document.querySelectorAll('.menu-item'));
+                this.updateHighlight();
+                this.initEventListeners();
+            },
+            
+            initEventListeners: function() {
+                document.addEventListener('keydown', this.handleKeyNavigation.bind(this));
+                
+                // 点击终端区域时，切换到终端模式
+                document.getElementById('terminal').addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    this.switchFocus('terminal');
+                });
+                
+                // 点击菜单区域时，切换到菜单模式
+                document.querySelector('.menu-panel').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.switchFocus('menu');
+                });
+            },
+            
+            switchFocus: function(target) {
+                this.currentFocus = target;
+                
+                if (target === 'terminal') {
+                    document.querySelector('.cursor').style.display = 'inline-block';
+                    document.getElementById('user-input').focus();
+                    UserInterfaceView.updateInfoBar("MODE: COMMAND INPUT");
+                } else {
+                    document.querySelector('.cursor').style.display = 'none';
+                    document.getElementById('user-input').blur();
+                    this.ensureSelection();
+                    const selectedText = this.getSelectedItemText();
+                    UserInterfaceView.updateInfoBar(`SELECT: ${selectedText}`);
+                }
+                
+                EventBus.publish('navigation:focusChanged', target);
+            },
+            
+            handleKeyNavigation: function(e) {
+                // 方向键导航
+                if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    if (e.key === 'ArrowUp') {
+                        this.navigateUp();
+                    } else {
+                        this.navigateDown();
+                    }
+                    
+                    // 如果在终端模式，自动切换到菜单模式
+                    if (this.currentFocus === 'terminal') {
+                        this.switchFocus('menu');
+                    }
+                    
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Enter键行为区分
+                if (e.key === 'Enter') {
+                    if (this.currentFocus === 'terminal') {
+                        // 让TerminalController处理
+                        EventBus.publish('terminal:commandEntered');
+                    } else {
+                        // 菜单模式：选择菜单项
+                        this.activateSelection();
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Tab键切换焦点区域
+                if (e.key === 'Tab') {
+                    if (this.currentFocus === 'terminal') {
+                        this.switchFocus('menu');
+                    } else {
+                        this.switchFocus('terminal');
+                    }
+                    e.preventDefault();
+                    return;
+                }
+                
+                // 如果按下其他键且当前不在终端模式，自动切换到终端模式
+                if (this.currentFocus !== 'terminal' && 
+                    e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    this.switchFocus('terminal');
+                }
+            },
+            
+            navigateUp: function() {
+                this.menuIndex = (this.menuIndex - 1 + this.menuItems.length) % this.menuItems.length;
+                this.updateHighlight();
+            },
+            
+            navigateDown: function() {
+                this.menuIndex = (this.menuIndex + 1) % this.menuItems.length;
+                this.updateHighlight();
+            },
+            
+            activateSelection: function() {
+                if (this.menuItems.length > 0) {
+                    const selectedItem = this.menuItems[this.menuIndex];
+                    selectedItem.click();
+                }
+            },
+            
+            ensureSelection: function() {
+                if (this.menuItems.length > 0 && this.menuIndex < 0) {
+                    this.menuIndex = 0;
+                }
+                this.updateHighlight();
+            },
+            
+            getSelectedItemText: function() {
+                if (this.menuItems.length > 0 && this.menuIndex >= 0 && this.menuIndex < this.menuItems.length) {
+                    return this.menuItems[this.menuIndex].textContent;
+                }
+                return "NONE";
+            },
+            
+            updateHighlight: function() {
+                // 移除所有高亮
+                this.menuItems.forEach(item => item.classList.remove('selected'));
+                
+                // 设置新的高亮
+                if (this.menuItems.length > 0) {
+                    this.menuItems[this.menuIndex].classList.add('selected');
+                    
+                    // 更新底部信息栏
+                    const selectedText = this.getSelectedItemText();
+                    UserInterfaceView.updateInfoBar(`SELECT: ${selectedText}`);
                 }
             }
         };
