@@ -1,0 +1,74 @@
+/* CRT显示器外壳 */
+.crt-container {
+    position: relative;
+    width: 95%;
+    height: 90%;
+    max-width: 1200px;
+    margin: 2% auto;
+    background-color: #222;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* 屏幕效果 */
+.screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+    display: flex;
+    /* 添加双线边框 */
+    border: 2px solid #e3af00;
+    outline: 1px solid #e3af00;
+    outline-offset: -4px;
+}
+
+/* CRT效果：扫描线 */
+.screen::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* CRT效果：轻微辉光 */
+.screen::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow: inset 0 0 30px rgba(200, 175, 20, 0.1);
+    pointer-events: none;
+    z-index: 9;
+}
+
+/* 电源按钮 */
+.power-button {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 15px;
+    height: 15px;
+    background-color: #444;
+    border: 2px solid #333;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.power-button:active {
+    background-color: #e3af00;
+    box-shadow: 0 0 10px rgba(227, 175, 0, 0.7);
+}

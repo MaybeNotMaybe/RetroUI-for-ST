@@ -1,0 +1,32 @@
+/* 应用窗口 */
+.app-window {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 5px;
+    padding-top: 35px;  /* 增加顶部padding */
+    color: #e3af00;
+    overflow-y: auto;
+}
+
+/* 窗口标题栏 */
+.window-title {
+    border-bottom: 1px solid #e3af00;
+    padding: 5px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+}
+
+.close-btn {
+    cursor: pointer;
+}
+
+/* 窗口内容 */
+.window-content {
+    padding: 5px;
+}

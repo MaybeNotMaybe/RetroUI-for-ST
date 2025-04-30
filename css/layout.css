@@ -1,0 +1,49 @@
+/* 左侧程序窗口 */
+.program-window {
+    flex: 1;
+    border-right: 1px solid #e3af00;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 右侧菜单 */
+.menu-panel {
+    width: 180px;
+    padding: 10px;
+    overflow-y: auto;
+    user-select: none;
+}
+
+/* 状态栏 */
+.status-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 25px;
+    border-bottom: 1px solid #e3af00;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    align-items: center;
+    color: #e3af00;
+    background-color: rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+    z-index: 5;
+}
+
+/* 底部信息栏样式 */
+.info-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background-color: #e3af00;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    z-index: 100;
+}

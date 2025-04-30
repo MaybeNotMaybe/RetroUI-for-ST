@@ -1,0 +1,35 @@
+/* 开机动画效果 */
+@keyframes flicker {
+    0% { opacity: 0.8; }
+    5% { opacity: 0.5; }
+    10% { opacity: 0.8; }
+    15% { opacity: 0.9; }
+    20% { opacity: 0.7; }
+    25% { opacity: 0.9; }
+    30% { opacity: 0.8; }
+    35% { opacity: 1.0; }
+    40% { opacity: 0.7; }
+    45% { opacity: 0.9; }
+    50% { opacity: 1.0; }
+    55% { opacity: 0.8; }
+    60% { opacity: 0.9; }
+    100% { opacity: 1.0; }
+}
+
+/* 开机后应用闪烁效果 */
+.flicker-effect {
+    animation: flicker 2s ease-in-out;
+}
+
+/* 加载动画 */
+@keyframes loading {
+    0% { content: ".  "; }
+    33% { content: ".. "; }
+    66% { content: "..."; }
+    100% { content: ".  "; }
+}
+
+.loading::after {
+    content: ".  ";
+    animation: loading 1.5s infinite steps(1);
+}

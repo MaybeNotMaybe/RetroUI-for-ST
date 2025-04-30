@@ -41,6 +41,9 @@ CIA 终端模拟器是一款基于网页的文字冒险游戏，玩家扮演一�
     │
     ├── managers/  # 管理器
     │   ├── SaveManager.js     # 游戏存档管理
+    │   │   └── dataModules/                # 数据模块目录
+    │   │        ├── EmailDataModule.js  # 邮件数据模块
+    │   │        ├── FileDataModule.js   # 文件系统数据模块
     │   └── EffectsManager.js  # 视觉和音效
     │
     └── app.js                 # 主应用入口
@@ -71,9 +74,20 @@ CIA 终端模拟器是一款基于网页的文字冒险游戏，玩家扮演一�
    - MailController.js: 管理邮件应用程序逻辑
    - FileController.js: 管理文件浏览器逻辑
 5. 管理器（managers/）
-   - SaveManager.js: 统一管理游戏存档数据
-     - EmailDataModule: 处理邮件数据
-     - FileDataModule: 处理文件系统数据
+   - SaveManager.js: 存档系统核心，提供数据存取接口
+     - 负责协调各数据模块的操作
+     - 提供统一的数据持久化接口
+     - 模块注入和初始化管理
+   - dataModules/: 数据模块目录
+     - EmailDataModule.js: 处理邮件数据
+       - 邮件增删改查
+       - 邮件状态管理
+       - 默认邮件初始化
+     - FileDataModule.js: 处理文件系统数据
+       - 文件和目录CRUD操作
+       - 路径导航和查询
+       - 目录结构自动生成
+       - 默认文件初始化
    - EffectsManager.js: 管理视觉和音效
 6. 应用入口（app.js）
    - 初始化游戏系统
@@ -902,8 +916,12 @@ js/utils/SaveManager.js
   - 按ID、类型和路径检索文件
 运行依赖：
 1. 核心依赖：
-   - StorageManager.js
-   - EventBus.js
+   - EmailDataModule依赖SaveManager核心访问数据
+   - FileDataModule依赖SaveManager核心访问数据
+   - SaveManager核心依赖StorageManager进行本地存储
+   - 所有数据模块都可以通过EventBus发布事件
+   - MailController依赖EmailDataModule处理邮件数据
+   - FileController依赖FileDataModule处理文件数据
 事件机制：
 1. 发布事件：
    - 'mail:unreadChanged': 未读邮件数量变化
@@ -916,7 +934,80 @@ js/utils/SaveManager.js
 - 安全的数据初始化和默认值处理
 ```
 
+```
+js/utils/modules/EmailDataModule.js
+已完成功能：
+- 邮件数据初始化系统
+- 邮件CRUD操作系统
+  - 创建、读取、更新、删除邮件
+  - 邮件已读/未读状态管理
+- 邮件查询功能
+  - 全部邮件获取
+  - 按ID查询邮件
+  - 未读邮件过滤
+- 默认邮件生成系统
+  - 欢迎邮件
+  - 使用说明邮件
+  - 任务邮件
 
+运行依赖：
+1. 核心依赖：
+   - SaveManager.js（数据存储与访问）
+   - EventBus.js（事件通知）
+
+事件机制：
+1. 发布事件：
+   - 'mail:unreadChanged': 未读邮件数量变化时触发
+
+技术细节：
+- 依赖注入式设计，作为SaveManager的独立模块
+- 基于事件驱动的未读状态更新机制
+- 邮件数据持久化存储
+- 唯一ID生成确保邮件标识唯一性
+- 自动初始化默认邮件功能
+- 按日期生成结构化的邮件内容
+- 实时未读邮件计数
+```
+
+```
+js/utils/modules/FileDataModule.js
+已完成功能：
+- 文件系统初始化
+- 文件与目录的CRUD操作
+  - 创建文件和目录
+  - 读取文件内容
+  - 更新文件内容
+  - 删除文件和目录
+- 文件查询系统
+  - 按ID获取文件
+  - 按类型筛选文件
+  - 按路径获取文件和子项
+- 目录结构自动生成系统
+  - 路径解析与目录层级管理
+  - 父子目录关系维护
+  - 缺失目录自动创建
+- 默认文件和目录生成
+
+运行依赖：
+1. 核心依赖：
+   - SaveManager.js（数据存储与访问）
+   - EventBus.js（事件通知，仅用于潜在的扩展）
+
+事件机制：
+1. 当前无明确事件发布2
+   （预留：可能的未来事件如'file:created'、'file:updated'等）
+
+技术细节：
+- 依赖注入式设计，作为SaveManager的独立模块
+- 完整的文件系统层次结构支持
+- 路径处理与分析算法
+- 自动目录路径生成机制
+- 文件路径检索与匹配系统
+- 根目录与子目录的特殊处理逻辑
+- 文件唯一ID生成与管理
+- 文件类型识别与过滤功能
+- 深层嵌套目录自动创建与维护
+```
 
 
 

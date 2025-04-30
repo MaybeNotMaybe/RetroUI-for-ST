@@ -1,0 +1,48 @@
+/* 全局样式、重置和通用设置 */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1/1;
+    overflow: hidden;
+    font-family: monospace;
+    background-color: #111;
+}
+
+/* 隐藏所有滚动条相关的样式 */
+::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+    display: none;
+}
+
+/* 适用于Firefox */
+* {
+    scrollbar-width: none;
+}
+
+/* 确保全局没有滚动条 */
+html, body {
+    overflow: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+/* 确保含滚动内容的容器不显示滚动条但保留滚动功能 */
+.terminal, .app-window, .menu-panel, .window-content {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overflow-y: auto;
+}
+
+.terminal::-webkit-scrollbar, 
+.app-window::-webkit-scrollbar, 
+.menu-panel::-webkit-scrollbar,
+.window-content::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    background: transparent;
+    display: none;
+}

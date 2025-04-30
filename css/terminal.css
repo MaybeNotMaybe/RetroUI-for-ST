@@ -1,0 +1,101 @@
+/* 终端内容区域 */
+.terminal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 15px;
+    padding-top: 35px; /* 为顶部状态栏留出空间 */
+    color: #e3af00;
+    font-family: "Courier New", monospace;
+    font-size: 16px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-y: auto;
+    text-shadow: 0 0 5px rgba(227, 175, 0, 0.5);
+    background-color: #000;
+}
+
+/* 输出历史区域 */
+.terminal-output {
+    margin-bottom: 20px;
+}
+
+/* 当前命令行 */
+.current-command-line {
+    display: flex;
+    align-items: center;
+    position: relative;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+/* 命令提示符和输入区域 */
+.command-line {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+    width: 100%;
+    position: relative;
+}
+
+.prompt {
+    color: #e3af00;
+    margin-right: 8px;
+}
+
+/* 可见命令文本 */
+#command-text {
+    color: #e3af00;
+    white-space: pre;
+}
+
+/* 输入框包装器 */
+.input-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+.input-container {
+    position: relative;
+    flex-grow: 1;
+}
+
+/* 输入框 */
+#user-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    height: 1px;
+    width: 1px;
+    z-index: -1;
+}
+
+/* 闪烁的光标 */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* 光标 */
+.cursor {
+    display: inline-block;
+    width: 10px;
+    height: 18px;
+    background-color: #e3af00;
+    animation: blink 1s infinite;
+    margin-left: 2px;
+}
+
+.input-focus .cursor {
+    background-color: #e3af00;
+    box-shadow: 0 0 8px rgba(227, 175, 0, 0.8);
+}
+
+/* 终端头部样式 */
+.terminal-header-line {
+    text-align: left;
+    padding-left: 30px; /* 给左侧留出一定空间 */
+}
