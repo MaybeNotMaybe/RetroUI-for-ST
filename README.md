@@ -12,6 +12,18 @@ CIA 终端模拟器是一款基于网页的文字冒险游戏，玩家扮演一�
 /cia-terminal
 ├── index.html  # 主页面（包含所有HTML和CSS）
 │
+├── css/
+│    ├── base.css            # 全局基础样式与重置
+│    ├── crt-effects.css     # CRT显示器与屏幕效果
+│    ├── layout.css          # 主要布局结构
+│    ├── menu.css            # 菜单面板与用户界面元素
+│    ├── terminal.css        # 终端界面样式
+│    ├── app-window.css      # 应用窗口通用样式
+│    ├── mail-app.css        # 邮件应用特定样式
+│    ├── file-app.css        # 文件浏览器特定样式
+│    ├── animations.css      # 动画与视觉效果
+│    └── css-loader.js       # CSS动态加载器
+│
 └── js/  # JavaScript代码目录
     ├── core/  # 核心功能模块
     │   ├── EventBus.js        # 事件发布/订阅系统
@@ -1007,6 +1019,30 @@ js/utils/modules/FileDataModule.js
 - 文件唯一ID生成与管理
 - 文件类型识别与过滤功能
 - 深层嵌套目录自动创建与维护
+```
+
+```
+// css/css-loader.js
+document.addEventListener('DOMContentLoaded', function() {
+    const cssFiles = [
+        'base.css',
+        'crt-effects.css',
+        'layout.css',
+        'menu.css',
+        'terminal.css', 
+        'app-window.css',
+        'mail-app.css',
+        'file-app.css',
+        'animations.css'
+    ];
+    
+    cssFiles.forEach(file => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = `./css/${file}`;
+        document.head.appendChild(link);
+    });
+});
 ```
 
 
